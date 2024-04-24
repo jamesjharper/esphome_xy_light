@@ -102,7 +102,7 @@ class WhiteChromaTransform {
     }
 
     auto brightness = powf(impurity_attn, this->_impurity_attn_decay_gamma) * t_xyY.Y;
-    return color_space::gamma_compression(brightness, this->_gamma);
+    return color_space::exp_gamma_compress(brightness, this->_gamma);
   }
 };
 

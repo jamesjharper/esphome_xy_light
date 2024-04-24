@@ -5,7 +5,7 @@ from esphome.const import (CONF_OUTPUT_ID, CONF_ID)
 
 from . import validation as xy_cv
 
-from .xy_output import (xy_light_ns, XyOutput)
+from .xy_output import (xy_light_ns, XyOutput, CONF_XY_OUTPUT_CALIBRATION_LOGGING)
 
 from .rgb_profile import (RGB_PROFILE_CONFIG_SCHEMA, RgbProfile, to_rgb_profile_code)
 from .cwww_profile import (CWWW_PROFILE_CONFIG_SCHEMA, CwWwProfile, to_cwww_profile_code)
@@ -83,9 +83,10 @@ CONFIG_SCHEMA = cv.All(
         cv.Optional(CONF_SOURCE_COLOR_PROFILE_ID): cv.use_id(RgbProfile),
         cv.Optional(CONF_SOURCE_COLOR_PROFILE): RGB_PROFILE_CONFIG_SCHEMA,
         cv.Required(CONF_CONTROLS): cv.ensure_list(CONTROL_CONFIG_SCHEMA),
-        cv.Optional(CONF_XY_OUTPUTS): cv.ensure_list(XY_OUTPUT_TYPE_VARIANT_SCHEMA)
+        cv.Optional(CONF_XY_OUTPUTS): cv.ensure_list(XY_OUTPUT_TYPE_VARIANT_SCHEMA),
+        cv.Optional(CONF_XY_OUTPUT_CALIBRATION_LOGGING): cv.boolean
     }),
-    cv.has_exactly_one_key(CONF_SOURCE_COLOR_PROFILE_ID, CONF_SOURCE_COLOR_PROFILE)
+    cv.has_at_most_one_key(CONF_SOURCE_COLOR_PROFILE_ID, CONF_SOURCE_COLOR_PROFILE)
 )
 
 async def to_control_code(config, var_light_output):
@@ -114,6 +115,11 @@ async def to_code(config):
         await to_rgb_profile_code(config[CONF_SOURCE_COLOR_PROFILE])
         inline_profile = await cg.get_variable(config[CONF_SOURCE_COLOR_PROFILE][CONF_ID])
         cg.add(var_light_output.set_source_color_profile(inline_profile))
+
+    if CONF_XY_OUTPUT_CALIBRATION_LOGGING in config:     
+        enable_cal_log = config[CONF_XY_OUTPUT_CALIBRATION_LOGGING]
+        if enable_cal_log:
+            cg.add(var_light_output.enable_calibration_logging(True))    
 
     if CONF_XY_OUTPUTS in config:
         for output in config[CONF_XY_OUTPUTS]:

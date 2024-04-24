@@ -1,5 +1,6 @@
 #pragma once
 #include <set>
+#include "esphome/core/optional.h"
 #include "esphome/core/component.h"
 #include "esphome/components/light/light_output.h"
 #include "esphome/components/light/light_state.h"
@@ -17,35 +18,38 @@ inline static bool almost_eq(float a, float b) {
 }
 
 class XyLightOutput {
- protected:
-  // Will default to aces_ap0
+ protected: 
+
   RgbChromaTransform _gamut_transform;
-  RgbChromaTransform _gamut_transform_wb;
+  color_space::Cie2dColorSpace _white_point = color_space::Xy_Cie1931();
 
   std::vector<XyOutput *> _outputs;
 
   float _brightness, _saturation = 1.0f;
+  bool _calibration_logging = false;
 
   color_space::RGB _rgb;
+  optional<color_space::Xy_Cie1931> _xy = {};
+  
  public:
 
-  void set_source_color_profile(RgbProfile *profile) {
-    this->_gamut_transform_wb = profile->get_chroma_transform(); 
+  XyLightOutput() {
+    this->_gamut_transform.set_sRGB();
+    this->_white_point = this->_gamut_transform.get_white_point();
+  }
 
-    // Save a copy which can be use for converting input
-    // xy values without altering the white balance
-    this->_gamut_transform = this->_gamut_transform_wb;
+  void set_source_color_profile(RgbProfile *profile) {
+    this->_gamut_transform = profile->get_chroma_transform(); 
+    this->_white_point = this->_gamut_transform.get_white_point();
   }
 
   void add_output(XyOutput *output) { this->_outputs.push_back(output); }
 
-  void reset_color_temperature_value() {
-    this->_gamut_transform_wb = this->_gamut_transform;
-  }
-
   void set_color_temperature_value(float mired) {
-    auto ct_uv_1960 = color_space::Cct::from_mireds(mired).uv;
-    this->_gamut_transform_wb.set_white_point(ct_uv_1960.as_xy_cie1931());
+    if(!this->_calibration_logging) {
+      auto ct_uv_1960 = color_space::Cct::from_mireds(mired).uv;
+      this->_white_point = ct_uv_1960.as_xy_cie1931();
+    }
   }
 
   void set_color_saturation_value(float i) {
@@ -61,38 +65,52 @@ class XyLightOutput {
   }
 
   void set_xy_value(float x, float y) {
-    // Note, esphome does not support receiving xy values so this 
-    // implementation hasnt been thoroughly tested
-
-    // 1: converts the xy value into a XYZ value using Y (brightness) as 1.0
-    // brightness is applied later
-    auto xyz = color_space::Xy_Cie1931(x, y).as_XYZ_cie1931(1.0f);
-
-    // 2: convert XYZ to an RGB value. Assuming the color profile has not been changed
-    // this will use the default profile ACES AP0 which contains all posable xy values 
-    // ** this step might have issues with floating point error, a smaller profile might be 
-    // needed to prevent banding
-    auto rgb = this->_gamut_transform.XYZ_to_RGB(xyz);
-
-    // 3: Later on when converting back to XYZ, the white balance adjusted profile will be used
-    // resulting in a desired colour shift.
-    this->_rgb = rgb;
+    this->_xy = color_space::Xy_Cie1931(x, y);
   }
 
-  void apply() {
-    auto rgb = this->_rgb;
+  void enable_calibration_logging(bool enable) { this->_calibration_logging = enable; }
 
+  void apply() {
+    if (this->_xy.has_value()) {
+      // Use xy values if they have been given
+      this->apply_xyY(this->_xy.value(), 1.0f);
+    } else {
+      // Otherwise convert RGB values to xy from source colour space
+      auto xyY = this->_gamut_transform.RGB_to_XYZ(this->_rgb).as_xyY_cie1931();
+      auto xy = xyY.as_xy_cie1931();
+      auto Y = xyY.Y;
+      this->apply_xyY(xy, Y);
+    }
+  }
+
+  void apply_xyY(color_space::Xy_Cie1931 xy, float Y) {
     if (!almost_eq(this->_saturation, 1.0f)) {
-      rgb = rgb.adjust_brightness_saturation(this->_brightness, this->_saturation);
-    } else if (!almost_eq(this->_brightness, 1.0f)) {
-      rgb = rgb.adjust_brightness(this->_brightness);
+      xy = this->_gamut_transform.adjust_saturation(xy, this->_saturation);
     } 
 
-    auto XYZ = this->_gamut_transform_wb.RGB_to_XYZ(rgb);
-
-    for (auto output : this->_outputs){
-        output->set_color_XYZ( XYZ.X, XYZ.Y, XYZ.Z);
+    if (!almost_eq(this->_brightness, 1.0f)) {
+      Y *= this->_brightness;
     }
+
+    // Adjust white balance
+    auto XYZ = color_space::xyY_Cie1931(xy.x, xy.y, Y).as_XYZ_cie1931();
+    XYZ = this->_gamut_transform.adjust_white_balance(XYZ, this->_white_point);
+
+    if(this->_calibration_logging) {
+      XyLightOutput::log_calibration_data(XYZ);
+    }
+        
+    for (auto output : this->_outputs){
+        output->set_color_XYZ(XYZ.X, XYZ.Y, XYZ.Z);
+    }
+  }
+
+  static void log_calibration_data(color_space::XYZ_Cie1931 XYZ) {
+    auto xyY = XYZ.as_xyY_cie1931();
+    ESP_LOGI("output.xy_light_output", "xy: [%.3f%, %.3f%], XYZ: [%.3f%, %.3f%, %.3f%], Approx Color Temperature: %.0f K%", 
+      xyY.x, xyY.y, 
+      XYZ.X, XYZ.Y, XYZ.Z, 
+      xyY.cct_kelvin_approx());
   }
 };
 
@@ -120,6 +138,11 @@ enum class ControlType : std::uint8_t {
   RGB_CT = (std::uint8_t) (ControlAttributes::RGB | ControlAttributes::CT | ControlAttributes::INTERLOCK),
   RGB_CWWW = (std::uint8_t) (ControlAttributes::RGB | ControlAttributes::CW_WW),
 
+  XY = (std::uint8_t)(ControlAttributes::XY),
+  XY_SATURATION = (std::uint8_t) (ControlAttributes::XY | ControlAttributes::SATURATION),
+  XY_CT = (std::uint8_t) (ControlAttributes::XY | ControlAttributes::CT | ControlAttributes::INTERLOCK),
+  XY_CWWW = (std::uint8_t) (ControlAttributes::XY | ControlAttributes::CW_WW),
+
   CT = (std::uint8_t) (ControlAttributes::CT),
   CWWW = (std::uint8_t) (ControlAttributes::CW_WW),
   BRIGHTNESS = (std::uint8_t) (ControlAttributes::BRIGHTNESS),
@@ -145,26 +168,26 @@ class XyLightControl : public light::LightOutput, public Component  {
 
   void set_control_attributes(ControlAttributes attr) {
 
-        this->_control_attributes = attr | this->_control_attributes;
-        std::set<light::ColorMode> supported_color_modes;
+    this->_control_attributes = attr | this->_control_attributes;
+    std::set<light::ColorMode> supported_color_modes;
 
-        if ((uint8_t)(this->_control_attributes & ControlAttributes::CT)) {
-            supported_color_modes.insert(light::ColorMode::COLOR_TEMPERATURE);
-        }
+    if ((uint8_t)(this->_control_attributes & ControlAttributes::CT)) {
+        supported_color_modes.insert(light::ColorMode::COLOR_TEMPERATURE);
+    }
 
-        if ((uint8_t)(this->_control_attributes & ControlAttributes::CW_WW)) {
-            supported_color_modes.insert(light::ColorMode::COLD_WARM_WHITE);
-        }
+    if ((uint8_t)(this->_control_attributes & ControlAttributes::CW_WW)) {
+        supported_color_modes.insert(light::ColorMode::COLD_WARM_WHITE);
+    }
 
-        if ((uint8_t)(this->_control_attributes & ControlAttributes::BRIGHTNESS)) {
-            supported_color_modes.insert(light::ColorMode::WHITE);
-        }
+    if ((uint8_t)(this->_control_attributes & ControlAttributes::BRIGHTNESS)) {
+        supported_color_modes.insert(light::ColorMode::WHITE);
+    }
 
-        if ((uint8_t)(this->_control_attributes & ControlAttributes::RGB)) {
-            supported_color_modes.insert(light::ColorMode::RGB);
-        }
+    if ((uint8_t)(this->_control_attributes & ControlAttributes::RGB)) {
+        supported_color_modes.insert(light::ColorMode::RGB);
+    }
 
-        this->_traits.set_supported_color_modes(supported_color_modes);
+    this->_traits.set_supported_color_modes(supported_color_modes);
   }
 
   void set_xy_light_output(XyLightOutput* _xy_output_light) {
@@ -202,9 +225,9 @@ class XyLightControl : public light::LightOutput, public Component  {
     }
 
     // Not supported by esphome at this time
-    /*if (this->_control_attributes & ControlAttributes::XY) {
+    //if (this->_control_attributes & ControlAttributes::XY) {
         // this->_xy_output_light->set_xy_value(...);
-    }*/
+    //}
 
     this->_xy_output_light->apply();
   }

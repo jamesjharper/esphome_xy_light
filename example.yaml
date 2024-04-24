@@ -1,8 +1,8 @@
 
 external_components:
   - source:
-    type: git
-    url: https://github.com/jamesjharper/esphome_xy_light
+      type: git
+      url: https://github.com/jamesjharper/esphome_xy_light
 
 light:
   - platform: xy_light

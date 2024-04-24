@@ -6,76 +6,15 @@
 
 using namespace esphome::xy_light::color_space;
 
-HSL RGB::as_hsl() {
-  float max = std::max(std::max(this->r, this->g), this->b);
-  float min = std::min(std::min(this->r, this->g), this->b);
-
-  float h = (max + min) / 2;
-  float s = h;
-  float l = h;
-
-  if (max == min) {
-    h = s = 0;  // achromatic
-  } else {
-    float d = max - min;
-    s = (l > 0.5) ? d / (2 - max - min) : d / (max + min);
-
-    if (max == this->r) {
-      h = (this->g - this->b) / d + (this->g < this->b ? 6 : 0);
-    } else if (max == this->g) {
-      h = (this->b - this->r) / d + 2;
-    } else if (max == b) {
-      h = (this->r - g) / d + 4;
-    }
-
-    h /= 6;
-  }
-
-  return HSL(h, s, l);
-}
-
-RGB RGB::adjust_brightness_saturation(float l, float s) {
-  auto hsl = this->as_hsl();
-  hsl.l *= l;
-  hsl.s *= s;
-  return hsl.as_rgb();
-}
-
-RGB HSL::as_rgb() {
-  float r = this->l;
-  float g = this->l;
-  float b = this->l;
-
-  if (0 != s) {
-    float q = this->l < 0.5 ? this->l * (1 + this->s) : this->l + this->s - this->l * this->s;
-    float p = 2 * this->l - q;
-    r = hue2rgb(p, q, h + 1. / 3);
-    g = hue2rgb(p, q, h);
-    b = hue2rgb(p, q, h - 1. / 3);
-  }
-
-  return RGB(r, g, b);
-}
-
-float HSL::hue2rgb(float p, float q, float t) {
-  if (t < 0)
-    t += 1;
-  if (t > 1)
-    t -= 1;
-  if (t < 1. / 6)
-    return p + (q - p) * 6 * t;
-  if (t < 1. / 2)
-    return q;
-  if (t < 2. / 3)
-    return p + (q - p) * (2. / 3 - t) * 6;
-
-  return p;
-}
-
 xyY_Cie1931 XYZ_Cie1931::as_xyY_cie1931() {
-  float inv_sum = this->X + this->Y + this->Z;
-  inv_sum = inv_sum > 1e-8f ? 1.0f / inv_sum : 0.0f;
+  float sum = this->X + this->Y + this->Z; 
+  auto inv_sum = sum > 1e-8f ? 1.0f / sum : 0.0f;
   return xyY_Cie1931(this->X * inv_sum, this->Y * inv_sum, this->Y);
+}
+
+Xy_Cie1931 XYZ_Cie1931::as_xy_cie1931() {
+  auto xyY = this->as_xyY_cie1931();
+  return Xy_Cie1931(xyY.x, xyY.y);
 }
 
 float xyY_Cie1931::cct_kelvin_approx() { return Xy_Cie1931(this->x, this->y).cct_kelvin_approx(); }
@@ -85,6 +24,10 @@ float xyY_Cie1931::cct_mired_approx() { return Xy_Cie1931(this->x, this->y).cct_
 XYZ_Cie1931 xyY_Cie1931::as_XYZ_cie1931() {
   float Y_y = this->y > 1e-8f ? this->Y / this->y : 0.0f;
   return XYZ_Cie1931(this->x * Y_y, this->Y, (1.0f - this->x - this->y) * Y_y);
+}
+
+Xy_Cie1931 xyY_Cie1931::as_xy_cie1931() {
+  return Xy_Cie1931(this->x, this->y);
 }
 
 xyY_Cie1931 Xy_Cie1931::as_xyY_cie1931(float Y) { return xyY_Cie1931(this->x, this->y, Y); }

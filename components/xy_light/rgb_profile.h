@@ -9,6 +9,7 @@ namespace esphome {
 namespace xy_light {
 
 class RgbChromaTransform {
+  
   // Great learning resources can be found here
   // https://patapom.com/blog/Colorimetry/ColorTransforms/
 
@@ -20,16 +21,50 @@ class RgbChromaTransform {
   optional<matrices::Matrix3x3> _XYZ2RGB_d, _XYZ2RGB_inv_d;
   optional<matrices::Matrix3x3> _XYZ2RGB, _RGB2XYZ;
 
+  color_space::RGB (*_gamma_decompress_fn)(color_space::RGB, float);
+  color_space::RGB (*_gamma_compress_fn)(color_space::RGB, float);
+
+  static color_space::RGB exp_decompress_gamma(color_space::RGB rgb, float g) {
+    float (*fn)(float, float) = color_space::exp_gamma_decompress;
+    return color_space::RGB(fn(rgb.r, g), fn(rgb.g, g), fn(rgb.b, g));
+  }
+
+  static color_space::RGB exp_compress_gamma(color_space::RGB rgb, float g) {
+    float (*fn)(float, float) = color_space::exp_gamma_compress;
+    return color_space::RGB(fn(rgb.r, g), fn(rgb.g, g), fn(rgb.b, g));
+  }
+
+  static color_space::RGB srgb_decompress_gamma(color_space::RGB rgb, float g) {
+    float (*fn)(float, float) = color_space::srgb_gamma_decompress;
+    return color_space::RGB(fn(rgb.r, g), fn(rgb.g, g), fn(rgb.b, g));
+  }
+
+  static color_space::RGB srgb_compress_gamma(color_space::RGB rgb, float g) {
+    float (*fn)(float, float) = color_space::srgb_gamma_compress;
+    return color_space::RGB(fn(rgb.r, g), fn(rgb.g, g), fn(rgb.b, g));
+  }
+
+  static color_space::RGB no_decompress_gamma(color_space::RGB rgb, float g) {
+    return rgb;
+  }
+
+  static color_space::RGB no_compress_gamma(color_space::RGB rgb, float g) {
+    return rgb;
+  }
+
  public:
   RgbChromaTransform()
-      : _r(color_space::Xy_Cie1931(0.7347f, 0.2653f)),
-        _g(color_space::Xy_Cie1931(0.0000f, 1.0000f)),
-        _b(color_space::Xy_Cie1931(0.0001f, -0.0770f)),
-        _w(color_space::Xy_Cie1931(0.32168f, 0.33767f)),
+      : _r(color_space::Xy_Cie1931()),
+        _g(color_space::Xy_Cie1931()),
+        _b(color_space::Xy_Cie1931()),
+        _w(color_space::Xy_Cie1931()),
         _r_output_cal(1.0f),
         _g_output_cal(1.0f),
         _b_output_cal(1.0f),
-        _gamma(1.0f) {}
+        _gamma(1.0f) {
+    this->_gamma_decompress_fn = RgbChromaTransform::no_decompress_gamma;
+    this->_gamma_compress_fn = RgbChromaTransform::no_compress_gamma;
+  }
 
   void set_typical_led() {
     this->_r = color_space::Xy_Cie1931(0.7f, 0.3f);
@@ -37,6 +72,8 @@ class RgbChromaTransform {
     this->_b = color_space::Xy_Cie1931(0.15f, 0.06f);
     this->_w = color_space::Cie2dColorSpace::Illuminant_d65();
     this->_gamma = 1.0f;
+    this->_gamma_decompress_fn = RgbChromaTransform::no_decompress_gamma;
+    this->_gamma_compress_fn = RgbChromaTransform::no_compress_gamma;
   }
 
   void set_sRGB() {
@@ -44,7 +81,9 @@ class RgbChromaTransform {
     this->_g = color_space::Xy_Cie1931(0.3000f, 0.6000f);
     this->_b = color_space::Xy_Cie1931(0.1500f, 0.0600f);
     this->_w = color_space::Cie2dColorSpace::Illuminant_d65();
-    this->_gamma = 2.2f;
+    this->_gamma = 2.4f;
+    this->_gamma_decompress_fn = RgbChromaTransform::srgb_decompress_gamma;
+    this->_gamma_compress_fn = RgbChromaTransform::srgb_compress_gamma;
   }
 
   void set_AdobeRGB_D55() {
@@ -53,6 +92,8 @@ class RgbChromaTransform {
     this->_b = color_space::Xy_Cie1931(0.1500f, 0.0600f);
     this->_w = color_space::Cie2dColorSpace::Illuminant_d55();
     this->_gamma = 2.2f;
+    this->_gamma_decompress_fn = RgbChromaTransform::exp_decompress_gamma;
+    this->_gamma_compress_fn = RgbChromaTransform::exp_compress_gamma;
   }
 
   void set_AdobeRGB_D65() {
@@ -61,6 +102,8 @@ class RgbChromaTransform {
     this->_b = color_space::Xy_Cie1931(0.1500f, 0.0600f);
     this->_w = color_space::Cie2dColorSpace::Illuminant_d65();
     this->_gamma = 2.2f;
+    this->_gamma_decompress_fn = RgbChromaTransform::exp_decompress_gamma;
+    this->_gamma_compress_fn = RgbChromaTransform::exp_compress_gamma;
   }
 
   void set_ProPhoto() {
@@ -69,6 +112,8 @@ class RgbChromaTransform {
     this->_b = color_space::Xy_Cie1931(0.0366f, 0.0001f);
     this->_w = color_space::Cie2dColorSpace::Illuminant_d50();
     this->_gamma = 1.8f;
+    this->_gamma_decompress_fn = RgbChromaTransform::exp_decompress_gamma;
+    this->_gamma_compress_fn = RgbChromaTransform::exp_compress_gamma;
   }
 
   void set_ACES_AP0() {
@@ -77,6 +122,18 @@ class RgbChromaTransform {
     this->_b = color_space::Xy_Cie1931(0.0001f, -0.0770f);  // Not a typo
     this->_w = color_space::Xy_Cie1931(0.32168f, 0.33767f);
     this->_gamma = 1.0f;
+    this->_gamma_decompress_fn = RgbChromaTransform::no_decompress_gamma;
+    this->_gamma_compress_fn = RgbChromaTransform::no_compress_gamma;
+  }
+
+  void set_ACES_AP1() {
+    this->_r = color_space::Xy_Cie1931(0.713f, 0.293f);
+    this->_g = color_space::Xy_Cie1931(0.165f, 0.830f);
+    this->_b = color_space::Xy_Cie1931(0.128f, 0.044f);
+    this->_w = color_space::Xy_Cie1931(0.32168f, 0.33767f);
+    this->_gamma = 1.0f;
+    this->_gamma_decompress_fn = RgbChromaTransform::no_decompress_gamma;
+    this->_gamma_compress_fn = RgbChromaTransform::no_compress_gamma;
   }
 
   void set_gamma(float g) { this->_gamma = g; }
@@ -101,25 +158,60 @@ class RgbChromaTransform {
     this->reset_scale_vec();
   }
 
+  color_space::Cie2dColorSpace get_white_point() {
+    return this->_w;
+  }
+
   void set_weighted_red_intensity(float i) { this->_r_output_cal = i; }
 
   void set_weighted_green_intensity(float i) { this->_g_output_cal = i; }
 
   void set_weighted_blue_intensity(float i) { this->_b_output_cal = i; }
 
+  color_space::Xy_Cie1931 adjust_saturation(color_space::Cie2dColorSpace c, float sat) {
+    auto w_xy = _w.as_xy_cie1931();
+    auto xy = c.as_xy_cie1931();
+
+    auto x = xy.x + (1 - sat) * (w_xy.x - xy.x);
+    auto y = xy.y + (1 - sat) * (w_xy.y - xy.y);
+    return color_space::Xy_Cie1931(x, y);
+  }
+
+  color_space::XYZ_Cie1931 adjust_white_balance(color_space::XYZ_Cie1931 xyz, color_space::Cie2dColorSpace target_white_point) {
+
+    auto source_white_point_XYZ = this->_w.as_xy_cie1931().as_XYZ_cie1931(1.0f);
+    auto target_white_point_XYZ = target_white_point.as_xy_cie1931().as_XYZ_cie1931(1.0f);
+
+    double source_sum = source_white_point_XYZ.X + source_white_point_XYZ.Y + source_white_point_XYZ.Z;
+    double target_sum = target_white_point_XYZ.X + target_white_point_XYZ.Y + target_white_point_XYZ.Z;
+
+    double scale_X = (target_white_point_XYZ.X / target_sum) / (source_white_point_XYZ.X / source_sum);
+    double scale_Y = (target_white_point_XYZ.Y / target_sum) / (source_white_point_XYZ.Y / source_sum);
+    double scale_Z = (target_white_point_XYZ.Z / target_sum) / (source_white_point_XYZ.Z / source_sum);
+
+    xyz.X = xyz.X * scale_X;
+    xyz.Y = xyz.Y * scale_Y;
+    xyz.Z = xyz.Z * scale_Z;
+
+    return xyz;
+  }
+
+
   color_space::XYZ_Cie1931 RGB_to_XYZ(color_space::RGB rgb) {
-    auto rgb_decomp = rgb.gamma_decompress(this->_gamma);
+    auto rgb_decomp =  this->_gamma_decompress_fn(rgb, this->_gamma);
+    
     auto XYZ = RGB_2_Cie1931XYZ_transform_matrix() * matrices::Vec3(rgb_decomp.r, rgb_decomp.g, rgb_decomp.b);
     return color_space::XYZ_Cie1931(XYZ.x, XYZ.y, XYZ.z);
   }
 
   color_space::RGB XYZ_to_RGB(color_space::XYZ_Cie1931 XYZ) {
     auto rgb_xyz = Cie1931XYZ_2_rgb_transform_matrix() * matrices::Vec3(XYZ.X, XYZ.Y, XYZ.Z);
-    auto rgb = color_space::RGB(rgb_xyz.x, rgb_xyz.y, rgb_xyz.z).gamma_compress(this->_gamma);
 
-    this->adjust_for_weighted_outputs(rgb);
-    this->adjust_for_colors_out_of_gamut(rgb);
-    return rgb;
+    auto rgb = color_space::RGB(rgb_xyz.x, rgb_xyz.y, rgb_xyz.z);
+    auto rgb_comp = this->_gamma_compress_fn(rgb, this->_gamma);
+    this->adjust_for_weighted_outputs(rgb_comp);
+    this->adjust_for_colors_out_of_gamut(rgb_comp);
+    return rgb_comp;
   }
 
   matrices::Matrix3x3 &RGB_2_Cie1931XYZ_transform_matrix() {
@@ -254,6 +346,9 @@ class RgbProfile : public Component {
   void use_ProPhoto() { this->_chroma_transform.set_ProPhoto(); }
 
   void use_ACES_AP0() { this->_chroma_transform.set_ACES_AP0(); }
+
+  void use_ACES_AP1() { this->_chroma_transform.set_ACES_AP1(); }
+  
 
   RgbChromaTransform get_chroma_transform() { return this->_chroma_transform; }
 };

@@ -12,26 +12,41 @@ namespace color_space {
 struct Uv_Cie1976;
 struct Uv_Cie1960;
 struct xyY_Cie1931;
+struct Xy_Cie1931;
 struct Cct;
 struct RGB;
-struct HSL;
 
-static float gamma_compression(float value, float gamma) {
-  if (value <= 0.0f)
+static float exp_gamma_compress(float linear, float gamma) {
+  if (linear <= 0.0f)
     return 0.0f;
   if (gamma <= 0.0f)
-    return value;
+    return linear;
 
-  return powf(value, gamma);
+  return powf(linear, gamma);
 }
 
-static float gamma_decompression(float value, float gamma) {
+static float exp_gamma_decompress(float value, float gamma) {
   if (value <= 0.0f)
     return 0.0f;
   if (gamma <= 0.0f)
     return value;
 
   return powf(value, 1.0f / gamma);
+}
+
+static float srgb_gamma_compress(float linear, float gamma) {
+    if (linear <= 0.0031308) {
+        return 12.92 * linear;
+    } else {
+        return 1.055 * pow(linear, 1.0f / gamma) - 0.055f;
+    }
+}
+static float srgb_gamma_decompress(float sRGB, float gamma) {
+    if (sRGB <= 0.04045) {
+        return sRGB / 12.92f;
+    } else {
+        return pow((sRGB + 0.055f) / 1.055f, gamma);
+    }
 }
 
 struct RGB {
@@ -41,19 +56,6 @@ struct RGB {
 
   RGB() : r(0.0), g(0.0), b(0.0){};
   RGB(float r, float g, float b) : r(r), g(g), b(b){};
-
-  RGB gamma_compress(float gamma) {
-    return RGB(gamma_compression(this->r, gamma), gamma_compression(this->g, gamma), gamma_compression(this->b, gamma));
-  }
-
-  RGB gamma_decompress(float gamma) {
-    return RGB(gamma_decompression(this->r, gamma), gamma_decompression(this->g, gamma),
-               gamma_decompression(this->b, gamma));
-  }
-
-  RGB adjust_brightness(float l) { return RGB(this->r * l, this->g * l, this->b * l); }
-
-  RGB adjust_brightness_saturation(float l, float s);
 
   float max() { return std::max(std::max(this->r, this->g), this->b); }
 
@@ -68,22 +70,6 @@ struct RGB {
     }
     return *this;
   }
-
-  HSL as_hsl();
-};
-
-struct HSL {
-  float h;
-  float s;
-  float l;
-
-  HSL() : h(0.0), s(0.0), l(0.0){};
-  HSL(float h, float s, float l) : h(h), s(s), l(l){};
-
-  RGB as_rgb();
-
- private:
-  float hue2rgb(float p, float q, float t);
 };
 
 struct CwWw {
@@ -94,11 +80,11 @@ struct CwWw {
   CwWw(float cw, float ww) : cw(cw), ww(ww){};
 
   CwWw gamma_compress(float gamma) {
-    return CwWw(gamma_compression(this->cw, gamma), gamma_compression(this->ww, gamma));
+    return CwWw(exp_gamma_compress(this->cw, gamma), exp_gamma_compress(this->ww, gamma));
   }
 
   CwWw gamma_decompress(float gamma) {
-    return CwWw(gamma_decompression(this->cw, gamma), gamma_decompression(this->ww, gamma));
+    return CwWw(exp_gamma_decompress(this->cw, gamma), exp_gamma_decompress(this->ww, gamma));
   }
 };
 
@@ -111,6 +97,7 @@ struct XYZ_Cie1931 {
   XYZ_Cie1931(float X, float Y, float Z) : X(X), Y(Y), Z(Z){};
 
   xyY_Cie1931 as_xyY_cie1931();
+  Xy_Cie1931 as_xy_cie1931();
 };
 
 struct xyY_Cie1931 {
@@ -125,6 +112,7 @@ struct xyY_Cie1931 {
   float cct_mired_approx();
 
   XYZ_Cie1931 as_XYZ_cie1931();
+  Xy_Cie1931 as_xy_cie1931();
 };
 
 struct Xy_Cie1931 {
