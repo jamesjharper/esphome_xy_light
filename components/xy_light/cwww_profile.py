@@ -64,4 +64,12 @@ async def to_cwww_profile_code(config):
         imp = config[CONF_PROFILE_PURPLE_TINT_IMPURITY]
         cg.add(var.set_purple_tint_duv_impurity(imp))
 
+    if CONF_PROFILE_RED_CCT_IMPURITY in config:
+        imp = config[CONF_PROFILE_RED_CCT_IMPURITY]
+        cg.add(var.set_red_wb_impurity(imp))
+
+    if CONF_PROFILE_BLUE_CCT_IMPURITY in config:
+        imp = config[CONF_PROFILE_BLUE_CCT_IMPURITY]
+        cg.add(var.set_blue_wb_impurity(imp))
+
     await cg.register_component(var, config)

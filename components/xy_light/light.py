@@ -48,7 +48,7 @@ XY_OUTPUT_TYPE_VARIANT_SCHEMA = cv.All(
         cv.Optional(CONF_XY_OUTPUT_TYPE__RGBW): RGBW_XY_OUTPUT_CONFIG_SCHEMA,
         cv.Optional(CONF_XY_OUTPUT_TYPE__CWWW): CWWW_XY_OUTPUT_CONFIG_SCHEMA, 
         cv.Optional(CONF_XY_OUTPUT_TYPE__W): WHITE_XY_OUTPUT_CONFIG_SCHEMA, 
-        cv.Optional(CONF_XY_OUTPUT_TYPE__ID): RGB_XY_OUTPUT_CONFIG_SCHEMA # UPDATE
+        cv.Optional(CONF_XY_OUTPUT_TYPE__ID): cv.use_id(XyLightOutput)
     }),
     cv.has_exactly_one_key(
         CONF_XY_OUTPUT_TYPE__RGB, 

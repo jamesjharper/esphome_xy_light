@@ -62,6 +62,7 @@ class RgbChromaTransform {
         _g_output_cal(1.0f),
         _b_output_cal(1.0f),
         _gamma(1.0f) {
+    this->_w = color_space::Cie2dColorSpace::Illuminant_d65();
     this->_gamma_decompress_fn = RgbChromaTransform::no_decompress_gamma;
     this->_gamma_compress_fn = RgbChromaTransform::no_compress_gamma;
   }
@@ -136,7 +137,11 @@ class RgbChromaTransform {
     this->_gamma_compress_fn = RgbChromaTransform::no_compress_gamma;
   }
 
-  void set_gamma(float g) { this->_gamma = g; }
+  void set_gamma(float g) { 
+    this->_gamma = g;
+    this->_gamma_decompress_fn = RgbChromaTransform::exp_decompress_gamma;
+    this->_gamma_compress_fn = RgbChromaTransform::exp_compress_gamma;
+  }
 
   void set_red(color_space::Cie2dColorSpace r) {
     this->_r = r;
