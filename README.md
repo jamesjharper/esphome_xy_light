@@ -22,7 +22,8 @@ light:
         default_transition_length: 1s
 
     source_color_profile:
-      standard: led
+      standard: sRGB
+
     xy_outputs:
       - rgb_cwww:
           red: red_channel
