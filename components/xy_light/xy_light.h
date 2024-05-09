@@ -34,6 +34,7 @@ class XyLightOutput {
  public:
 
   XyLightOutput() {
+    this->_rgb = color_space::RGB(1.0f,1.0f,1.0f);
     this->_gamut_transform.set_sRGB();
     this->_white_point = this->_gamut_transform.get_white_point();
   }
