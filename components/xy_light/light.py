@@ -18,6 +18,8 @@ from .rgb_cwww_xy_output import (RGB_CWWW_XY_OUTPUT_CONFIG_SCHEMA, to_rgb_cwww_x
 from .cwww_xy_output import (CWWW_XY_OUTPUT_CONFIG_SCHEMA, to_cwww_xy_output_code)
 from .white_xy_output import (WHITE_XY_OUTPUT_CONFIG_SCHEMA, to_white_xy_output_code)
 
+CODEOWNERS = ["@jamesjharper"]
+
 XyLightControl = xy_light_ns.class_("XyLightControl", light.LightOutput, cg.Component)
 XyLightOutput = xy_light_ns.class_("XyLightOutput")
 ControlType = xy_light_ns.enum("ControlType", is_class=True)

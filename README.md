@@ -3,9 +3,6 @@ XY Light Component
 The ``xy_light`` platform lets you create a single RGB or Color Temperature controlled light,
 from any combination of RGB and Warm / White / Cold white lights.
 
-While ``xy_light`` is 100% functional out of the box, you may experience a red, blue, green or purple cast when the control is set to neutral white.
-In such cases, you can provide calibrated intensity and chromaticity values of your device to ``xy_light`` to correct for this. This can be done with specialized equipment, or by eye depending on your requirements.
-
 ## Sample Config 
 ``` yaml
 external_components:
@@ -25,7 +22,8 @@ light:
         default_transition_length: 1s
 
     source_color_profile:
-      standard: led
+      standard: sRGB
+
     xy_outputs:
       - rgb_cwww:
           red: red_channel
