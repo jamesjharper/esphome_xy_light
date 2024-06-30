@@ -39,7 +39,12 @@ class CwWwXyOutput : public Component, public XyOutput {
   void set_cold_white_output(output::FloatOutput *cold_white) { this->_cold_white = cold_white; }
 
   static void log_calibration_data(color_space::CwWw cwww) {
-    ESP_LOGI("output.cwww_xy_output", "CW: %.0f%, WW: %.0f%", cwww.cw * 100, cwww.ww * 100);
+    auto cwww_max = cwww.max();
+    ESP_LOGI("output.cwww_xy_output", "Normalized: [CW %.2f%, WW %.2f%] Actual: [CW %.2f%, WW %.2f%]",
+          (cwww.cw / cwww_max) * 100.0f, 
+          (cwww.ww / cwww_max) * 100.0f, 
+          cwww.cw * 100.0f,  
+          cwww.ww * 100.0f);
   }
 };
 

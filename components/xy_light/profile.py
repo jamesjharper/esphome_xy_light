@@ -26,6 +26,18 @@ CONF_PROFILE_RED_INTENSITY = "red_intensity"
 CONF_PROFILE_GREEN_INTENSITY = "green_intensity"
 CONF_PROFILE_BLUE_INTENSITY = "blue_intensity"
 
+CONF_PROFILE_RED_MAX_INTENSITY = "max_red_intensity"
+CONF_PROFILE_GREEN_MAX_INTENSITY = "max_green_intensity"
+CONF_PROFILE_BLUE_MAX_INTENSITY = "max_blue_intensity"
+
+CONF_PROFILE_RED_MIN_INTENSITY = "min_red_intensity"
+CONF_PROFILE_GREEN_MIN_INTENSITY = "min_green_intensity"
+CONF_PROFILE_BLUE_MIN_INTENSITY = "min_blue_intensity"
+
+CONF_PROFILE_RED_GAMMA = "red_gamma"
+CONF_PROFILE_GREEN_GAMMA = "green_gamma"
+CONF_PROFILE_BLUE_GAMMA = "blue_gamma"
+
 # Color profiles - CWWW / W
 CONF_PROFILE_CWWW_COLOR_PROFILE_ID = "cwww_profile_id"
 CONF_PROFILE_CWWW_COLOR_PROFILE = "cwww_profile"
@@ -43,3 +55,11 @@ CONF_PROFILE_PURPLE_TINT_IMPURITY = "purple_tint_impurity"
 CONF_PROFILE_IMPURITY_GAMMA_DECAY = "impurity_gamma_decay"
 CONF_PROFILE_RED_CCT_IMPURITY = "red_cct_impurity"
 CONF_PROFILE_BLUE_CCT_IMPURITY = "blue_cct_impurity"
+
+CONF_PROFILE_MAX_WARM_WHITE_INTENSITY = "max_warm_white_intensity"
+CONF_PROFILE_MAX_COLD_WHITE_INTENSITY = "max_cold_white_intensity"
+CONF_PROFILE_MAX_COMBINED_WHITE_INTENSITY = "max_combined_white_intensity"
+
+CONF_PROFILE_MIN_WARM_WHITE_INTENSITY = "min_warm_white_intensity"
+CONF_PROFILE_MIN_COLD_WHITE_INTENSITY = "min_cold_white_intensity"
+CONF_PROFILE_MIN_COMBINED_WHITE_INTENSITY = "min_combined_white_intensity"

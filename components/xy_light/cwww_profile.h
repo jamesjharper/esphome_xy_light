@@ -25,6 +25,16 @@ class CwWwChromaTransform {
   float _cold_white_k;
   optional<float> _white_point_k;
 
+  color_space::CwWwIntensityCalibration _int_cal;
+
+  float _cold_white_max_output_cal = 1.0f;
+  float _warm_white_max_output_cal = 1.0f;
+  float _combined_max_output = 1.0f;
+
+  float _cold_white_min_output_cal = 0.0f;
+  float _warm_white_min_output_cal = 0.0f;
+  float _combined_min_output = 0.0f;
+
   // Greater the rate of decay:
   // - more colour accurate
   // - less bright when showing green/purple hues
@@ -38,6 +48,14 @@ class CwWwChromaTransform {
 
  public:
   void set_gamma(float g) { this->_gamma = g; }
+
+  void set_max_cold_white_intensity(float i) { this->_int_cal.max_cw = i; }
+  void set_max_warm_white_intensity(float i) { this->_int_cal.max_ww = i; }
+  void set_max_combined_white_intensity(float i) { this->_int_cal.max_combined = i; }
+
+  void set_min_cold_white_intensity(float i) { this->_int_cal.min_cw = i; }
+  void set_min_warm_white_intensity(float i) { this->_int_cal.min_ww = i; }
+  void set_min_combined_white_intensity(float i) { this->_int_cal.min_combined = i; }
 
   void set_warm_white(float mired) {
     auto ww = color_space::ColorTemperature::from_mired(mired);
@@ -121,13 +139,14 @@ class CwWwChromaTransform {
 
     float wp_k = this->white_point();
 
-    if (k < wp_k) {
-      return color_space::CwWw{cw: (1 - ((wp_k - k) / (wp_k - this->_warm_white_k))) * brightness, ww: brightness}
-          .gamma_compress(this->_gamma);
-    } else {
-      return color_space::CwWw{cw: brightness, ww: (1 - ((k - wp_k) / (this->_cold_white_k - wp_k))) * brightness}
-          .gamma_compress(this->_gamma);
-    }
+    auto cwww = k < wp_k?
+      color_space::CwWw{cw: (1 - ((wp_k - k) / (wp_k - this->_warm_white_k))) * brightness, ww: brightness} :
+      color_space::CwWw{cw: brightness, ww: (1 - ((k - wp_k) / (this->_cold_white_k - wp_k))) * brightness};
+
+    cwww = cwww.gamma_compress(this->_gamma);
+    cwww = this->_int_cal.apply_calibration(cwww);
+
+    return cwww;
   }
 
  protected:
@@ -145,6 +164,14 @@ class CwWwProfile : public Component {
 
  public:
   void set_gamma(float g) { this->_chroma_transform.set_gamma(g); }
+
+  void set_max_cold_white_intensity(float i) { this->_chroma_transform.set_max_cold_white_intensity(i); }
+  void set_max_warm_white_intensity(float i) { this->_chroma_transform.set_max_warm_white_intensity(i); }
+  void set_max_combined_white_intensity(float i) { this->_chroma_transform.set_max_combined_white_intensity(i); }
+
+  void set_min_cold_white_intensity(float i) { this->_chroma_transform.set_min_cold_white_intensity(i); }
+  void set_min_warm_white_intensity(float i) { this->_chroma_transform.set_min_warm_white_intensity(i); }
+  void set_min_combined_white_intensity(float i) { this->_chroma_transform.set_min_combined_white_intensity(i); }
 
   void set_green_tint_duv_impurity(float duv) { this->_chroma_transform.set_green_tint_duv_impurity(duv); }
 

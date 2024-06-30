@@ -48,9 +48,16 @@ class RgbXyOutput : public Component, public XyOutput {
 
  private:
   static void log_calibration_data(color_space::RGB rgb) {
-    auto max = rgb.max();
-    ESP_LOGI("output.rgb_xy_output", "Red: %.0f%, Green: %.0f%, Blue: %.0f%, Lum: %.0f%", (rgb.r / max) * 100,
-             (rgb.g / max) * 100, (rgb.b / max) * 100, max * 100);
+    auto rgb_max = rgb.max();
+
+    ESP_LOGI("output.rgb_xy_output", "Normalized: [R %.2f%, G %.2f%, B %.2f%] Actual: [R %.2f%, G %.2f%, B %.2f%]",
+      (rgb.r / rgb_max) * 100.0f, 
+      (rgb.g / rgb_max) * 100.0f, 
+      (rgb.b / rgb_max) * 100.0f, 
+      rgb.r * 100.0f, 
+      rgb.g * 100.0f, 
+      rgb.b * 100.0f
+    );
   }
 };
 }  // namespace xy_light

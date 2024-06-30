@@ -17,11 +17,12 @@ from .profile import (
     CONF_PROFILE_STANDARD_PROFILE__ACES_AP0,
     CONF_PROFILE_STANDARD_PROFILE__ACES_AP1
 )
-from .profile import (CONF_PROFILE_RED_XY, CONF_PROFILE_RED_WAVELENGTH, CONF_PROFILE_RED_INTENSITY)
-from .profile import (CONF_PROFILE_GREEN_XY, CONF_PROFILE_GREEN_WAVELENGTH, CONF_PROFILE_GREEN_INTENSITY)
-from .profile import (CONF_PROFILE_BLUE_XY, CONF_PROFILE_BLUE_WAVELENGTH, CONF_PROFILE_BLUE_INTENSITY)
+from .profile import (CONF_PROFILE_RED_XY, CONF_PROFILE_RED_WAVELENGTH, CONF_PROFILE_RED_INTENSITY, CONF_PROFILE_RED_MAX_INTENSITY, CONF_PROFILE_RED_MIN_INTENSITY, CONF_PROFILE_RED_GAMMA)
+from .profile import (CONF_PROFILE_GREEN_XY, CONF_PROFILE_GREEN_WAVELENGTH, CONF_PROFILE_GREEN_INTENSITY, CONF_PROFILE_GREEN_MAX_INTENSITY, CONF_PROFILE_GREEN_MIN_INTENSITY, CONF_PROFILE_GREEN_GAMMA)
+from .profile import (CONF_PROFILE_BLUE_XY, CONF_PROFILE_BLUE_WAVELENGTH, CONF_PROFILE_BLUE_INTENSITY, CONF_PROFILE_BLUE_MAX_INTENSITY, CONF_PROFILE_BLUE_MIN_INTENSITY, CONF_PROFILE_BLUE_GAMMA)
 from .profile import (CONF_PROFILE_WHITE_POINT_XY, CONF_PROFILE_WHITE_POINT_COLOR_TEMPERATURE)
 from .profile import CONF_PROFILE_GAMMA
+
 
 # RGB Profile Common 
 RgbProfile = xy_light_ns.class_("RgbProfile", cg.Component)
@@ -43,16 +44,25 @@ RGB_PROFILE_CONFIG_SCHEMA = cv.All(
         cv.Optional(CONF_PROFILE_RED_XY): xy_cv.cie_xy,
         cv.Optional(CONF_PROFILE_RED_WAVELENGTH): xy_cv.wavelength,
         cv.Optional(CONF_PROFILE_RED_INTENSITY): cv.percentage,
+        cv.Optional(CONF_PROFILE_RED_MAX_INTENSITY): cv.percentage,
+        cv.Optional(CONF_PROFILE_RED_MIN_INTENSITY): cv.percentage,
+        cv.Optional(CONF_PROFILE_RED_GAMMA): cv.positive_float,
 
         # Green
         cv.Optional(CONF_PROFILE_GREEN_XY): xy_cv.cie_xy,
         cv.Optional(CONF_PROFILE_GREEN_WAVELENGTH): xy_cv.wavelength,
         cv.Optional(CONF_PROFILE_GREEN_INTENSITY): cv.percentage,
+        cv.Optional(CONF_PROFILE_GREEN_MAX_INTENSITY): cv.percentage,
+        cv.Optional(CONF_PROFILE_GREEN_MIN_INTENSITY): cv.percentage,
+        cv.Optional(CONF_PROFILE_GREEN_GAMMA): cv.positive_float,
 
         # Blue
         cv.Optional(CONF_PROFILE_BLUE_XY): xy_cv.cie_xy,   
         cv.Optional(CONF_PROFILE_BLUE_WAVELENGTH): xy_cv.wavelength,
         cv.Optional(CONF_PROFILE_BLUE_INTENSITY): cv.percentage,
+        cv.Optional(CONF_PROFILE_BLUE_MAX_INTENSITY): cv.percentage,
+        cv.Optional(CONF_PROFILE_BLUE_MIN_INTENSITY): cv.percentage,
+        cv.Optional(CONF_PROFILE_BLUE_GAMMA): cv.positive_float,
 
         # White point
         cv.Optional(CONF_PROFILE_WHITE_POINT_XY): xy_cv.cie_xy,
@@ -103,7 +113,19 @@ async def to_rgb_profile_code(config):
     if CONF_PROFILE_RED_INTENSITY in config:
         i = config[CONF_PROFILE_RED_INTENSITY]
         cg.add(var.set_weighted_red_intensity(i))
-   
+
+    if CONF_PROFILE_RED_MAX_INTENSITY in config:
+        i = config[CONF_PROFILE_RED_MAX_INTENSITY]
+        cg.add(var.set_max_red_intensity(i))
+
+    if CONF_PROFILE_RED_MIN_INTENSITY in config:
+        i = config[CONF_PROFILE_RED_MIN_INTENSITY]
+        cg.add(var.set_min_red_intensity(i))
+
+    if CONF_PROFILE_RED_GAMMA in config:
+        i = config[CONF_PROFILE_RED_GAMMA]
+        cg.add(var.set_red_gamma(i))
+
     # Green Calibrations
     if CONF_PROFILE_GREEN_XY in config:
         xy = config[CONF_PROFILE_GREEN_XY]
@@ -118,6 +140,18 @@ async def to_rgb_profile_code(config):
         i = config[CONF_PROFILE_GREEN_INTENSITY]
         cg.add(var.set_weighted_green_intensity(i))
 
+    if CONF_PROFILE_GREEN_MAX_INTENSITY in config:
+        i = config[CONF_PROFILE_GREEN_MAX_INTENSITY]
+        cg.add(var.set_max_green_intensity(i))
+
+    if CONF_PROFILE_GREEN_MIN_INTENSITY in config:
+        i = config[CONF_PROFILE_GREEN_MIN_INTENSITY]
+        cg.add(var.set_min_green_intensity(i))
+
+    if CONF_PROFILE_GREEN_GAMMA in config:
+        i = config[CONF_PROFILE_GREEN_GAMMA]
+        cg.add(var.set_green_gamma(i))
+
     # Blue Calibrations
     if CONF_PROFILE_BLUE_XY in config:
         xy = config[CONF_PROFILE_BLUE_XY]
@@ -131,6 +165,18 @@ async def to_rgb_profile_code(config):
     if CONF_PROFILE_BLUE_INTENSITY in config:
         i = config[CONF_PROFILE_BLUE_INTENSITY]
         cg.add(var.set_weighted_blue_intensity(i))
+
+    if CONF_PROFILE_BLUE_MAX_INTENSITY in config:
+        i = config[CONF_PROFILE_BLUE_MAX_INTENSITY]
+        cg.add(var.set_max_blue_intensity(i))
+
+    if CONF_PROFILE_BLUE_MIN_INTENSITY in config:
+        i = config[CONF_PROFILE_BLUE_MIN_INTENSITY]
+        cg.add(var.set_min_blue_intensity(i))
+
+    if CONF_PROFILE_BLUE_GAMMA in config:
+        i = config[CONF_PROFILE_BLUE_GAMMA]
+        cg.add(var.set_blue_gamma(i))
 
     # White point Calibrations
     if CONF_PROFILE_WHITE_POINT_COLOR_TEMPERATURE in config:

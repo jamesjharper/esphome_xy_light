@@ -19,33 +19,32 @@ struct RGB;
 static float exp_gamma_compress(float linear, float gamma) {
   if (linear <= 0.0f)
     return 0.0f;
-  if (gamma <= 0.0f)
+  if (gamma == 1.0f || gamma <= 0.0f)
     return linear;
-
-  return powf(linear, gamma);
+  return powf(linear, 1.0f / gamma);
 }
 
 static float exp_gamma_decompress(float value, float gamma) {
   if (value <= 0.0f)
     return 0.0f;
-  if (gamma <= 0.0f)
+  if (gamma == 1.0f || gamma <= 0.0f)
     return value;
 
-  return powf(value, 1.0f / gamma);
+  return powf(value, gamma);
 }
 
 static float srgb_gamma_compress(float linear, float gamma) {
     if (linear <= 0.0031308) {
         return 12.92 * linear;
     } else {
-        return 1.055 * pow(linear, 1.0f / gamma) - 0.055f;
+        return 1.055 * powf(linear, 1.0f / gamma) - 0.055f;
     }
 }
 static float srgb_gamma_decompress(float sRGB, float gamma) {
     if (sRGB <= 0.04045) {
         return sRGB / 12.92f;
     } else {
-        return pow((sRGB + 0.055f) / 1.055f, gamma);
+        return powf((sRGB + 0.055f) / 1.055f, gamma);
     }
 }
 
@@ -72,6 +71,70 @@ struct RGB {
   }
 };
 
+struct RGBIntensityCalibration {
+  float r_int_output_cal = 1.0; 
+  float g_int_output_cal = 1.0; 
+  float b_int_output_cal = 1.0;
+
+  float r_max_output_cal = 1.0;
+  float g_max_output_cal = 1.0;
+  float b_max_output_cal = 1.0;
+
+  float r_min_output_cal = 0.0;
+  float g_min_output_cal = 0.0;
+  float b_min_output_cal = 0.0;
+
+  float r_gamma = 1.0; // value of 1 indicates no gamma correction is applied
+  float g_gamma = 1.0; // value of 1 indicates no gamma correction is applied
+  float b_gamma = 1.0; // value of 1 indicates no gamma correction is applied
+
+  RGB apply_calibration(RGB rgb) {
+    this->adjust_for_weighted_outputs(rgb);
+    this->adjust_for_colors_out_of_gamut(rgb);
+    this->adjust_for_min_max_intensity(rgb);
+
+    // Adjust gamma last as this is to correct for the output response curve
+    this->adjust_for_gamma_correction(rgb);
+    return rgb;
+  }
+
+  protected:
+
+  void adjust_for_colors_out_of_gamut(RGB &rgb) {
+    auto max = rgb.max();
+    if (max > 1.0f) {
+      rgb.r /= max;
+      rgb.g /= max;
+      rgb.b /= max;
+    }
+  }
+
+  void adjust_for_weighted_outputs(RGB &rgb) {
+    auto l = (rgb.r + rgb.g + rgb.b) / 3.0f;
+
+    auto r_adj = rgb.r * this->r_int_output_cal;
+    auto g_adj = rgb.g * this->g_int_output_cal;
+    auto b_adj = rgb.b * this->b_int_output_cal;
+    auto max = std::max(r_adj, std::max(g_adj, b_adj));
+
+    rgb.r = (r_adj / max) * l;
+    rgb.g = (g_adj / max) * l;
+    rgb.b = (b_adj / max) * l;
+  }
+
+  void adjust_for_min_max_intensity(RGB &rgb) {
+    rgb.r = rgb.r == 0.0f? 0.0f : (rgb.r * (1.0f - r_min_output_cal) * r_max_output_cal) + r_min_output_cal;
+    rgb.b = rgb.b == 0.0f? 0.0f : (rgb.b * (1.0f - b_min_output_cal) * b_max_output_cal) + b_min_output_cal;
+    rgb.g = rgb.g == 0.0f? 0.0f : (rgb.g * (1.0f - g_min_output_cal) * g_max_output_cal) + g_min_output_cal;
+  }
+
+  void adjust_for_gamma_correction(RGB &rgb) {
+    rgb.r = exp_gamma_decompress(rgb.r, r_gamma);
+    rgb.g = exp_gamma_decompress(rgb.g, g_gamma);
+    rgb.b = exp_gamma_decompress(rgb.b, b_gamma);
+  }
+};
+
 struct CwWw {
   float cw;
   float ww;
@@ -79,12 +142,72 @@ struct CwWw {
   CwWw() : cw(0.0), ww(0.0){};
   CwWw(float cw, float ww) : cw(cw), ww(ww){};
 
+  float max() { return std::max(this->cw, this->ww); }
+
   CwWw gamma_compress(float gamma) {
     return CwWw(exp_gamma_compress(this->cw, gamma), exp_gamma_compress(this->ww, gamma));
   }
 
   CwWw gamma_decompress(float gamma) {
     return CwWw(exp_gamma_decompress(this->cw, gamma), exp_gamma_decompress(this->ww, gamma));
+  }
+};
+
+struct CwWwIntensityCalibration {
+  float max_cw = 1.0f;
+  float max_ww = 1.0f;
+  float max_combined = 1.0f;
+
+  float min_cw = 0.0f; 
+  float min_ww = 0.0f; 
+  float min_combined = 0.0f;
+
+  CwWw apply_calibration(CwWw in) {
+
+    auto cw = clamp(in.cw, 0.0f, 1.0f);
+    auto ww = clamp(in.ww, 0.0f, 1.0f);
+
+    auto max = cw + ww;
+    auto cw_lv = cw / max;
+    auto ww_lv = ww / max;
+
+    auto max_cw_lv = 1.0f;
+    auto max_ww_lv = 1.0f;
+
+    auto min_cw_lv = 1.0f;
+    auto min_ww_lv = 1.0f;
+
+    if (cw_lv == 0.0f) {
+      // Zero means zero
+      max_cw_lv = 0.0f;
+      min_cw_lv = 0.0f;
+    } else if (cw_lv < 0.5f) {
+      auto ratio = cw_lv * 2.0f;
+      max_cw_lv = (max_cw * (1.0f - ratio)) + (max_combined * ratio);
+      min_cw_lv = (min_cw * (1.0f - ratio)) + (min_combined * ratio);
+    } else {
+      auto ratio =  (cw_lv - 0.5f) * 2.0f;
+      max_cw_lv = (max_cw * ratio) + (max_combined * (1.0f -  ratio));
+      min_cw_lv = (min_cw * ratio) + (min_combined * (1.0f -  ratio));
+    }
+    
+    if (cw_lv == 0.0f) {
+      // Zero means zero
+      min_ww_lv = 0.0f;
+      min_ww_lv = 0.0f;
+    } else if (ww_lv < 0.5f) {
+      auto ratio = ww_lv * 2.0f;
+      max_cw_lv = (max_ww * (1.0f - ratio)) + (max_combined * ratio);
+      min_ww_lv = (min_ww * (1.0f - ratio)) + (min_combined * ratio);
+    } else {
+      auto ratio =  (ww_lv - 0.5f) * 2.0f;
+      max_ww_lv = (max_ww * ratio) + (max_combined * (1.0f -  ratio));
+      min_ww_lv = (min_ww * (1.0f - ratio)) + (min_combined * ratio);
+    }
+    auto cw_adj = (cw * (1.0f - min_cw_lv) * max_cw_lv) + min_cw_lv;
+    auto ww_adj = (ww * (1.0f - min_ww_lv) * max_ww_lv) + min_ww_lv;
+
+    return CwWw(cw_adj, ww_adj);
   }
 };
 

@@ -16,7 +16,10 @@ class RgbChromaTransform {
   // Original inspiration for implementation
   // https://gist.github.com/dbr/24cfd1033c2d59f263e3#file-rgb_to_xyz_matrix-py-L181
   color_space::Cie2dColorSpace _r, _g, _b, _w;
-  float _r_output_cal, _g_output_cal, _b_output_cal, _gamma;
+  float _gamma;
+
+  color_space::RGBIntensityCalibration _int_cal;
+
   optional<matrices::Vec3> _wp_scale, _wp_scale_inv;
   optional<matrices::Matrix3x3> _XYZ2RGB_d, _XYZ2RGB_inv_d;
   optional<matrices::Matrix3x3> _XYZ2RGB, _RGB2XYZ;
@@ -58,9 +61,6 @@ class RgbChromaTransform {
         _g(color_space::Xy_Cie1931()),
         _b(color_space::Xy_Cie1931()),
         _w(color_space::Xy_Cie1931()),
-        _r_output_cal(1.0f),
-        _g_output_cal(1.0f),
-        _b_output_cal(1.0f),
         _gamma(1.0f) {
     this->_w = color_space::Cie2dColorSpace::Illuminant_d65();
     this->_gamma_decompress_fn = RgbChromaTransform::no_decompress_gamma;
@@ -167,11 +167,34 @@ class RgbChromaTransform {
     return this->_w;
   }
 
-  void set_weighted_red_intensity(float i) { this->_r_output_cal = i; }
 
-  void set_weighted_green_intensity(float i) { this->_g_output_cal = i; }
+  // Weighted calibration 
+  void set_weighted_red_intensity(float i) { this->_int_cal.r_int_output_cal = i; }
 
-  void set_weighted_blue_intensity(float i) { this->_b_output_cal = i; }
+  void set_weighted_green_intensity(float i) { this->_int_cal.g_int_output_cal = i; }
+
+  void set_weighted_blue_intensity(float i) { this->_int_cal.b_int_output_cal = i; }
+
+  // Max calibration 
+  void set_max_red_intensity(float i) { this->_int_cal.r_max_output_cal = i;}
+
+  void set_max_green_intensity(float i) { this->_int_cal.g_max_output_cal = i;}
+
+  void set_max_blue_intensity(float i) { this->_int_cal.b_max_output_cal = i;}
+
+  // Min calibration 
+  void set_min_red_intensity(float i) { this->_int_cal.r_min_output_cal = i;}
+
+  void set_min_green_intensity(float i) { this->_int_cal.g_min_output_cal = i;}
+
+  void set_min_blue_intensity(float i) { this->_int_cal.b_min_output_cal = i;}
+
+  // Color gamma calibration
+  void set_red_gamma(float g) { this->_int_cal.r_gamma = g;}
+  
+  void set_green_gamma(float g) { this->_int_cal.g_gamma = g;}
+
+  void set_blue_gamma(float g) { this->_int_cal.b_gamma = g;}
 
   color_space::Xy_Cie1931 adjust_saturation(color_space::Cie2dColorSpace c, float sat) {
     auto w_xy = _w.as_xy_cie1931();
@@ -214,9 +237,8 @@ class RgbChromaTransform {
 
     auto rgb = color_space::RGB(rgb_xyz.x, rgb_xyz.y, rgb_xyz.z);
     auto rgb_comp = this->_gamma_compress_fn(rgb, this->_gamma);
-    this->adjust_for_weighted_outputs(rgb_comp);
-    this->adjust_for_colors_out_of_gamut(rgb_comp);
-    return rgb_comp;
+    auto rgb_cal = this->_int_cal.apply_calibration(rgb_comp);
+    return rgb_cal;
   }
 
   matrices::Matrix3x3 &RGB_2_Cie1931XYZ_transform_matrix() {
@@ -245,22 +267,7 @@ class RgbChromaTransform {
   }
 
  protected:
-  void adjust_for_colors_out_of_gamut(color_space::RGB &rgb) {
-    // Currently only support a basic clipping strategy
-    auto max = rgb.max();
-    if (max > 1.0f) {
-      rgb.r /= max;
-      rgb.g /= max;
-      rgb.b /= max;
-    }
-  }
-
-  void adjust_for_weighted_outputs(color_space::RGB &rgb) {
-    rgb.r *= this->_r_output_cal;
-    rgb.g *= this->_g_output_cal;
-    rgb.b *= this->_b_output_cal;
-  }
-
+ 
   void reset_chroma() {
     this->_XYZ2RGB_d.reset();
     this->_XYZ2RGB_inv_d.reset();
@@ -320,8 +327,8 @@ class RgbProfile : public Component {
   RgbChromaTransform _chroma_transform;
 
  public:
-  void set_gamma(float g) { this->_chroma_transform.set_gamma(g); }
 
+  // Chromatic Calibration 
   void set_red_xy(float x, float y) { this->_chroma_transform.set_red(color_space::Xy_Cie1931(x, y)); }
 
   void set_green_xy(float x, float y) { this->_chroma_transform.set_green(color_space::Xy_Cie1931(x, y)); }
@@ -330,18 +337,11 @@ class RgbProfile : public Component {
 
   void set_white_point_xy(float x, float y) { this->_chroma_transform.set_white_point(color_space::Xy_Cie1931(x, y)); }
 
-  void set_weighted_red_intensity(float i) { this->_chroma_transform.set_weighted_red_intensity(i); }
-
-  void set_weighted_green_intensity(float i) { this->_chroma_transform.set_weighted_green_intensity(i); }
-
-  void set_weighted_blue_intensity(float i) { this->_chroma_transform.set_weighted_blue_intensity(i); }
-
   void set_white_point_cct(float mireds) {
     this->_chroma_transform.set_white_point(color_space::Cct::from_mireds(mireds).uv.as_xy_cie1931());
   }
 
-  void use_typical_led() { this->_chroma_transform.set_typical_led(); }
-
+  // Standard Input Profiles 
   void use_sRGB() { this->_chroma_transform.set_sRGB(); }
 
   void set_AdobeRGB_D55() { this->_chroma_transform.set_AdobeRGB_D55(); }
@@ -354,6 +354,38 @@ class RgbProfile : public Component {
 
   void use_ACES_AP1() { this->_chroma_transform.set_ACES_AP1(); }
   
+  // Typical Output Profile
+  void use_typical_led() { this->_chroma_transform.set_typical_led(); }
+
+  // Weighted calibration 
+  void set_weighted_red_intensity(float i) { this->_chroma_transform.set_weighted_red_intensity(i); }
+
+  void set_weighted_green_intensity(float i) { this->_chroma_transform.set_weighted_green_intensity(i); }
+
+  void set_weighted_blue_intensity(float i) { this->_chroma_transform.set_weighted_blue_intensity(i); }
+
+  // Max calibration 
+  void set_max_red_intensity(float i) { this->_chroma_transform.set_max_red_intensity(i); }
+
+  void set_max_green_intensity(float i) { this->_chroma_transform.set_max_green_intensity(i); }
+
+  void set_max_blue_intensity(float i) { this->_chroma_transform.set_max_blue_intensity(i); }
+
+  // Min calibration 
+  void set_min_red_intensity(float i) { this->_chroma_transform.set_min_red_intensity(i); }
+
+  void set_min_green_intensity(float i) { this->_chroma_transform.set_min_green_intensity(i); }
+
+  void set_min_blue_intensity(float i) { this->_chroma_transform.set_min_blue_intensity(i); }
+
+  // gamma calibrations
+  void set_gamma(float g) { this->_chroma_transform.set_gamma(g); }
+
+  void set_red_gamma(float g) { this->_chroma_transform.set_red_gamma(g); }
+
+  void set_green_gamma(float g) { this->_chroma_transform.set_green_gamma(g); }
+
+  void set_blue_gamma(float g) { this->_chroma_transform.set_blue_gamma(g); }
 
   RgbChromaTransform get_chroma_transform() { return this->_chroma_transform; }
 };

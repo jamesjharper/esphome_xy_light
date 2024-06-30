@@ -12,6 +12,10 @@ from .profile import (CONF_PROFILE_RED_CCT_IMPURITY, CONF_PROFILE_BLUE_CCT_IMPUR
 
 from .profile import (CONF_PROFILE_WHITE_POINT_COLOR_TEMPERATURE, CONF_PROFILE_COLD_WHITE_COLOR_TEMPERATURE,CONF_PROFILE_WARM_WHITE_COLOR_TEMPERATURE)
 
+
+from .profile import (CONF_PROFILE_MAX_WARM_WHITE_INTENSITY, CONF_PROFILE_MAX_COLD_WHITE_INTENSITY, CONF_PROFILE_MAX_COMBINED_WHITE_INTENSITY)
+from .profile import (CONF_PROFILE_MIN_WARM_WHITE_INTENSITY, CONF_PROFILE_MIN_COLD_WHITE_INTENSITY, CONF_PROFILE_MIN_COMBINED_WHITE_INTENSITY)
+
 # CWWW Profile Common 
 CwWwProfile = xy_light_ns.class_("CwWwProfile", cg.Component)
 
@@ -29,7 +33,15 @@ CWWW_PROFILE_CONFIG_SCHEMA  = cv.Schema({
     cv.Optional(CONF_PROFILE_WHITE_POINT_COLOR_TEMPERATURE): cv.color_temperature,
     cv.Required(CONF_PROFILE_COLD_WHITE_COLOR_TEMPERATURE): cv.color_temperature,
     cv.Required(CONF_PROFILE_WARM_WHITE_COLOR_TEMPERATURE): cv.color_temperature,
-    cv.Optional(CONF_PROFILE_GAMMA): cv.positive_float
+    cv.Optional(CONF_PROFILE_GAMMA): cv.positive_float,
+
+    cv.Optional(CONF_PROFILE_MAX_WARM_WHITE_INTENSITY): cv.percentage,
+    cv.Optional(CONF_PROFILE_MAX_COLD_WHITE_INTENSITY): cv.percentage,
+    cv.Optional(CONF_PROFILE_MAX_COMBINED_WHITE_INTENSITY): cv.percentage,
+
+    cv.Optional(CONF_PROFILE_MIN_WARM_WHITE_INTENSITY): cv.percentage,
+    cv.Optional(CONF_PROFILE_MIN_COLD_WHITE_INTENSITY): cv.percentage,
+    cv.Optional(CONF_PROFILE_MIN_COMBINED_WHITE_INTENSITY): cv.percentage,
 
 }).extend(cv.COMPONENT_SCHEMA)
 
@@ -39,6 +51,30 @@ async def to_cwww_profile_code(config):
     if CONF_PROFILE_GAMMA in config:
         g = config[CONF_PROFILE_GAMMA]
         cg.add(var.set_gamma(g))
+
+    if CONF_PROFILE_MAX_WARM_WHITE_INTENSITY in config:
+        i = config[CONF_PROFILE_MAX_WARM_WHITE_INTENSITY]
+        cg.add(var.set_max_warm_white_intensity(i))
+
+    if CONF_PROFILE_MAX_COLD_WHITE_INTENSITY in config:
+        i = config[CONF_PROFILE_MAX_COLD_WHITE_INTENSITY]
+        cg.add(var.set_max_cold_white_intensity(i))
+
+    if CONF_PROFILE_MAX_COMBINED_WHITE_INTENSITY in config:
+        i = config[CONF_PROFILE_MAX_COMBINED_WHITE_INTENSITY]
+        cg.add(var.set_max_combined_white_intensity(i))
+
+    if CONF_PROFILE_MIN_WARM_WHITE_INTENSITY in config:
+        i = config[CONF_PROFILE_MIN_WARM_WHITE_INTENSITY]
+        cg.add(var.set_min_warm_white_intensity(i))
+
+    if CONF_PROFILE_MIN_COLD_WHITE_INTENSITY in config:
+        i = config[CONF_PROFILE_MIN_COLD_WHITE_INTENSITY]
+        cg.add(var.set_min_cold_white_intensity(i))
+
+    if CONF_PROFILE_MIN_COMBINED_WHITE_INTENSITY in config:
+        i = config[CONF_PROFILE_MIN_COMBINED_WHITE_INTENSITY]
+        cg.add(var.set_min_combined_white_intensity(i))
 
     if CONF_PROFILE_IMPURITY_GAMMA_DECAY in config:
         imp = config[CONF_PROFILE_IMPURITY_GAMMA_DECAY]

@@ -208,7 +208,8 @@ class XyLightControl : public light::LightOutput, public Component  {
         this->_xy_output_light->set_color_temperature_value(ct);
     }
 
-    auto intensity = state->current_values.get_state() * state->current_values.get_brightness();
+    auto corrected_brightness = color_space::exp_gamma_decompress(state->current_values.get_brightness(), state->get_gamma_correct());
+    auto intensity = state->current_values.get_state() * corrected_brightness;
   
     if ((uint8_t)(this->_control_attributes & ControlAttributes::SATURATION)) {
         this->_xy_output_light->set_color_saturation_value(intensity);

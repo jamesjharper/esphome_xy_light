@@ -65,9 +65,20 @@ class RgbCwWwXyOutput : public Component, public XyOutput {
 
  private:
   static void log_calibration_data(color_space::RGB rgb, color_space::CwWw cwww) {
-    auto max = rgb.max();
-    ESP_LOGI("output.rgb_cwww_xy_output", "Red: %.0f%, Green: %.0f%, Blue: %.0f%, Cold White: %.0f%, Warm White: %.0f%",
-             (rgb.r / max) * 100, (rgb.g / max) * 100, (rgb.b / max) * 100, cwww.cw * 100, cwww.ww * 100);
+    auto rgb_max = rgb.max();
+    auto cwww_max = cwww.max();
+
+    ESP_LOGI("output.rgb_cwww_xy_output", "Normalized: [R %.2f%, G %.2f%, B %.2f%, CW %.2f%, WW %.2f%] Actual: [R %.2f%, G %.2f%, B %.2f%, CW %.2f%, WW %.2f%]",
+             (rgb.r / rgb_max) * 100.0f, 
+             (rgb.g / rgb_max) * 100.0f, 
+             (rgb.b / rgb_max) * 100.0f, 
+             (cwww.cw / cwww_max) * 100.0f, 
+             (cwww.ww / cwww_max) * 100.0f, 
+             rgb.r * 100.0f, 
+             rgb.g * 100.0f, 
+             rgb.b * 100.0f, 
+             cwww.cw * 100.0f,  
+             cwww.ww * 100.0f);
   }
 };
 }  // namespace xy_light
