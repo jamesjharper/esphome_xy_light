@@ -140,8 +140,8 @@ class CwWwChromaTransform {
     float wp_k = this->white_point();
 
     auto cwww = k < wp_k?
-      color_space::CwWw{cw: (1 - ((wp_k - k) / (wp_k - this->_warm_white_k))) * brightness, ww: brightness} :
-      color_space::CwWw{cw: brightness, ww: (1 - ((k - wp_k) / (this->_cold_white_k - wp_k))) * brightness};
+      color_space::CwWw((1 - ((wp_k - k) / (wp_k - this->_warm_white_k))) * brightness, brightness) :
+      color_space::CwWw(brightness,(1 - ((k - wp_k) / (this->_cold_white_k - wp_k))) * brightness);
 
     cwww = cwww.gamma_compress(this->_gamma);
     cwww = this->_int_cal.apply_calibration(cwww);

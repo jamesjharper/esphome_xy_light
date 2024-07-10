@@ -163,13 +163,18 @@ struct CwWwIntensityCalibration {
   float min_combined = 0.0f;
 
   CwWw apply_calibration(CwWw in) {
+    auto cw = in.cw;
+    auto ww = in.ww;
 
-    auto cw = clamp(in.cw, 0.0f, 1.0f);
-    auto ww = clamp(in.ww, 0.0f, 1.0f);
+    auto max = in.max();
+    if (max > 1.0f) {
+      cw /= max;
+      ww /= max;
+    }
 
-    auto max = cw + ww;
-    auto cw_lv = cw / max;
-    auto ww_lv = ww / max;
+    auto total = in.cw + in.ww;
+    auto cw_lv = in.cw / total;
+    auto ww_lv = in.ww / total;
 
     auto max_cw_lv = 1.0f;
     auto max_ww_lv = 1.0f;
@@ -181,7 +186,7 @@ struct CwWwIntensityCalibration {
       // Zero means zero
       max_cw_lv = 0.0f;
       min_cw_lv = 0.0f;
-    } else if (cw_lv < 0.5f) {
+    } else if (cw_lv <= 0.5f) {
       auto ratio = cw_lv * 2.0f;
       max_cw_lv = (max_cw * (1.0f - ratio)) + (max_combined * ratio);
       min_cw_lv = (min_cw * (1.0f - ratio)) + (min_combined * ratio);
@@ -191,18 +196,18 @@ struct CwWwIntensityCalibration {
       min_cw_lv = (min_cw * ratio) + (min_combined * (1.0f -  ratio));
     }
     
-    if (cw_lv == 0.0f) {
+    if (ww_lv == 0.0f) {
       // Zero means zero
       min_ww_lv = 0.0f;
       min_ww_lv = 0.0f;
-    } else if (ww_lv < 0.5f) {
+    } else if (ww_lv <= 0.5f) {
       auto ratio = ww_lv * 2.0f;
-      max_cw_lv = (max_ww * (1.0f - ratio)) + (max_combined * ratio);
+      max_ww_lv = (max_ww * (1.0f - ratio)) + (max_combined * ratio);
       min_ww_lv = (min_ww * (1.0f - ratio)) + (min_combined * ratio);
     } else {
       auto ratio =  (ww_lv - 0.5f) * 2.0f;
       max_ww_lv = (max_ww * ratio) + (max_combined * (1.0f -  ratio));
-      min_ww_lv = (min_ww * (1.0f - ratio)) + (min_combined * ratio);
+      min_ww_lv = (min_ww * ratio) + (min_combined * (1.0f -  ratio));
     }
     auto cw_adj = (cw * (1.0f - min_cw_lv) * max_cw_lv) + min_cw_lv;
     auto ww_adj = (ww * (1.0f - min_ww_lv) * max_ww_lv) + min_ww_lv;
