@@ -17,8 +17,6 @@ class Vec3 {
   Vec3 operator*(const Vec3 &v) const { return Vec3(x * v.x, y * v.y, z * v.z); }
 };
 
-static Vec3 operator*(float a, const Vec3 &b) { return Vec3(a * b.x, a * b.y, a * b.z); }
-
 class Matrix3x3 {
  public:
   float m[3][3];

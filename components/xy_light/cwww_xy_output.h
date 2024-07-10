@@ -40,7 +40,7 @@ class CwWwXyOutput : public Component, public XyOutput {
 
   static void log_calibration_data(color_space::CwWw cwww) {
     auto cwww_max = cwww.max();
-    ESP_LOGI("output.cwww_xy_output", "Normalized: [CW %.2f%, WW %.2f%] Actual: [CW %.2f%, WW %.2f%]",
+    ESP_LOGI("output.cwww_xy_output", "Normalized: [CW %.2f%%, WW %.2f%%] Actual: [CW %.2f%%, WW %.2f%%]",
           (cwww.cw / cwww_max) * 100.0f, 
           (cwww.ww / cwww_max) * 100.0f, 
           cwww.cw * 100.0f,  

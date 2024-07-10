@@ -108,7 +108,7 @@ class XyLightOutput {
 
   static void log_calibration_data(color_space::XYZ_Cie1931 XYZ) {
     auto xyY = XYZ.as_xyY_cie1931();
-    ESP_LOGI("output.xy_light_output", "xy: [%.3f%, %.3f%], XYZ: [%.3f%, %.3f%, %.3f%], Approx Color Temperature: %.0f K%", 
+    ESP_LOGI("output.xy_light_output", "xy: [%.3f%%, %.3f%%], XYZ: [%.3f%%, %.3f%%, %.3f%%], Approx Color Temperature: %.0f K", 
       xyY.x, xyY.y, 
       XYZ.X, XYZ.Y, XYZ.Z, 
       xyY.cct_kelvin_approx());

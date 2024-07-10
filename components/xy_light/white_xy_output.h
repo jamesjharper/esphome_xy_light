@@ -1,4 +1,5 @@
 #pragma once
+#include "esphome/core/log.h"
 #include "esphome/core/component.h"
 #include "esphome/components/output/float_output.h"
 
@@ -33,7 +34,7 @@ class WhiteXyOutput : public Component, public XyOutput {
 
   void set_white_output(output::FloatOutput *white) { this->_white = _white; }
 
-  static void log_calibration_data(float i) { ESP_LOGI("output.white_xy_output", "intensity: %.0f%", i * 100); }
+  static void log_calibration_data(float i) { ESP_LOGI("output.white_xy_output", "intensity: %.0f%%", i * 100); }
 };
 
 }  // namespace xy_light

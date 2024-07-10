@@ -68,7 +68,7 @@ class RgbCwWwXyOutput : public Component, public XyOutput {
     auto rgb_max = rgb.max();
     auto cwww_max = cwww.max();
 
-    ESP_LOGI("output.rgb_cwww_xy_output", "Normalized: [R %.2f%, G %.2f%, B %.2f%, CW %.2f%, WW %.2f%] Actual: [R %.2f%, G %.2f%, B %.2f%, CW %.2f%, WW %.2f%]",
+    ESP_LOGI("output.rgb_cwww_xy_output", "Normalized: [R %.2f%%, G %.2f%%, B %.2f%%, CW %.2f%%, WW %.2f%%] Actual: [R %.2f%%, G %.2f%%, B %.2f%%, CW %.2f%%, WW %.2f%%]",
              (rgb.r / rgb_max) * 100.0f, 
              (rgb.g / rgb_max) * 100.0f, 
              (rgb.b / rgb_max) * 100.0f, 

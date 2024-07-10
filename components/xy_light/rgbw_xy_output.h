@@ -60,7 +60,7 @@ class RgbwXyOutput : public Component, public XyOutput {
  private:
   static void log_calibration_data(color_space::RGB rgb, float w) {
     auto rgb_max = rgb.max();
-    ESP_LOGI("output.rgb_w_xy_output", "Normalized: [R %.2f%, G %.2f%, B %.2f%, W %.2f%] Actual: [R %.2f%, G %.2f%, B %.2f%, W %.2f%]",
+    ESP_LOGI("output.rgb_w_xy_output", "Normalized: [R %.2f%%, G %.2f%%, B %.2f%%, W %.2f%%] Actual: [R %.2f%%, G %.2f%%, B %.2f%%, W %.2f%%]",
           (rgb.r / rgb_max) * 100.0f, 
           (rgb.g / rgb_max) * 100.0f, 
           (rgb.b / rgb_max) * 100.0f, 

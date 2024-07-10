@@ -69,6 +69,7 @@ CONTROL_TYPES = {
     "RGB_CWWW": ControlType.RGB_CWWW,
     "CT": ControlType.CT,
     "CWWW": ControlType.CWWW,
+    "W": ControlType.BRIGHTNESS,
 }
 
 CONTROL_CONFIG_SCHEMA = cv.All(
