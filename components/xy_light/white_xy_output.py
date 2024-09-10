@@ -32,7 +32,7 @@ async def to_white_xy_output_code(config):
         cg.add(var.set_profile(profile))
 
     if CONF_XY_OUTPUT_WHITE_COLOR_PROFILE in config:
-        await to_cwww_profile_code(config[CONF_XY_OUTPUT_WHITE_COLOR_PROFILE])
+        await to_white_profile_code(config[CONF_XY_OUTPUT_WHITE_COLOR_PROFILE])
         inline_profile = await cg.get_variable(config[CONF_XY_OUTPUT_WHITE_COLOR_PROFILE][CONF_ID])
         cg.add(var.set_profile(inline_profile))
 
