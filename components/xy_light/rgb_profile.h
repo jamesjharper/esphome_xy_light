@@ -136,11 +136,32 @@ class RgbChromaTransform {
     this->_gamma_decompress_fn = RgbChromaTransform::no_decompress_gamma;
     this->_gamma_compress_fn = RgbChromaTransform::no_compress_gamma;
   }
+  float gamma() { return this->_gamma; }
 
   void set_gamma(float g) { 
     this->_gamma = g;
     this->_gamma_decompress_fn = RgbChromaTransform::exp_decompress_gamma;
     this->_gamma_compress_fn = RgbChromaTransform::exp_compress_gamma;
+  }
+
+  void set_illuminant_a() {
+    this->_w = color_space::Cie2dColorSpace::Illuminant_a();  // Incandescent, tungsten
+  }
+
+  void set_illuminant_d50() {
+    this->_w = color_space::Cie2dColorSpace::Illuminant_d50();  // Daylight, Horizon
+  }
+
+  void set_illuminant_d55() {
+    this->_w = color_space::Cie2dColorSpace::Illuminant_d55();  // Mid-Morning, Mid-Afternoon
+  }
+
+  void set_illuminant_d65() {
+    this->_w = color_space::Cie2dColorSpace::Illuminant_d65();  // Daylight, Noon, Overcast (sRGB reference illuminant)
+  }
+
+  void set_illuminant_e() {
+    this->_w = color_space::Cie2dColorSpace::Illuminant_e();  // Reference
   }
 
   void set_red(color_space::Cie2dColorSpace r) {
@@ -170,39 +191,54 @@ class RgbChromaTransform {
 
   // Weighted calibration 
   void set_weighted_red_intensity(float i) { this->_int_cal.r_int_output_cal = i; }
+  float weighted_red_intensity() { return this->_int_cal.r_int_output_cal; }
 
   void set_weighted_green_intensity(float i) { this->_int_cal.g_int_output_cal = i; }
+  float weighted_green_intensity() { return this->_int_cal.g_int_output_cal;}
 
   void set_weighted_blue_intensity(float i) { this->_int_cal.b_int_output_cal = i; }
+  float weighted_blue_intensity() { return this->_int_cal.b_int_output_cal;}
 
   // Max calibration 
   void set_max_red_intensity(float i) { this->_int_cal.r_max_output_cal = i;}
+  float max_red_intensity() { return this->_int_cal.r_max_output_cal;}
 
   void set_max_green_intensity(float i) { this->_int_cal.g_max_output_cal = i;}
+  float max_green_intensity() { return this->_int_cal.g_max_output_cal;}
 
   void set_max_blue_intensity(float i) { this->_int_cal.b_max_output_cal = i;}
+  float max_blue_intensity() { return this->_int_cal.b_max_output_cal;}
 
   // Min calibration 
   void set_min_red_intensity(float i) { this->_int_cal.r_min_output_cal = i;}
+  float min_red_intensity() { return this->_int_cal.r_min_output_cal;}
 
   void set_min_green_intensity(float i) { this->_int_cal.g_min_output_cal = i;}
+  float min_green_intensity() { return this->_int_cal.g_min_output_cal;}
 
   void set_min_blue_intensity(float i) { this->_int_cal.b_min_output_cal = i;}
+  float min_blue_intensity() { return this->_int_cal.b_min_output_cal;}
 
   // Color gamma calibration
   void set_red_gamma(float g) { this->_int_cal.r_gamma = g;}
+  float red_gamma() { return this->_int_cal.r_gamma;}
   
   void set_green_gamma(float g) { this->_int_cal.g_gamma = g;}
+  float green_gamma() { return this->_int_cal.g_gamma;}
 
   void set_blue_gamma(float g) { this->_int_cal.b_gamma = g;}
+  float blue_gamma() { return this->_int_cal.b_gamma;}
 
-  color_space::Xy_Cie1931 adjust_saturation(color_space::Cie2dColorSpace c, float sat) {
+  color_space::xyY_Cie1931 adjust_saturation(color_space::xyY_Cie1931 xyY, float sat) {
     auto w_xy = _w.as_xy_cie1931();
-    auto xy = c.as_xy_cie1931();
 
-    auto x = xy.x + (1 - sat) * (w_xy.x - xy.x);
-    auto y = xy.y + (1 - sat) * (w_xy.y - xy.y);
-    return color_space::Xy_Cie1931(x, y);
+    // Lerp the xy value with the white balance using the saturation as the interpolation point
+    auto x = xyY.x + ((1 - sat) * (w_xy.x - xyY.x));
+    auto y = xyY.y + ((1 - sat) * (w_xy.y - xyY.y));
+
+     // the less saturated the less "dark" the color is.
+    auto Y = (sat * xyY.Y) + (1.0f - sat);
+    return color_space::xyY_Cie1931(x, y, Y); 
   }
 
   color_space::XYZ_Cie1931 adjust_white_balance(color_space::XYZ_Cie1931 xyz, color_space::Cie2dColorSpace target_white_point) {
@@ -238,6 +274,7 @@ class RgbChromaTransform {
     auto rgb = color_space::RGB(rgb_xyz.x, rgb_xyz.y, rgb_xyz.z);
     auto rgb_comp = this->_gamma_compress_fn(rgb, this->_gamma);
     auto rgb_cal = this->_int_cal.apply_calibration(rgb_comp);
+
     return rgb_cal;
   }
 
@@ -341,6 +378,26 @@ class RgbProfile : public Component {
     this->_chroma_transform.set_white_point(color_space::Cct::from_mireds(mireds).uv.as_xy_cie1931());
   }
 
+  void set_illuminant_a() {
+    this->_chroma_transform.set_illuminant_a();  // Incandescent, tungsten
+  }
+
+  void set_illuminant_d50() {
+    this->_chroma_transform.set_illuminant_d55();  // Daylight, Horizon
+  }
+
+  void set_illuminant_d55() {
+    this->_chroma_transform.set_illuminant_d55();  // Mid-Morning, Mid-Afternoon
+  }
+
+  void set_illuminant_d65() {
+    this->_chroma_transform.set_illuminant_d65();  // Daylight, Noon, Overcast (sRGB reference illuminant)
+  }
+
+  void set_illuminant_e() {
+    this->_chroma_transform.set_illuminant_e();  // Reference
+  }
+
   // Standard Input Profiles 
   void use_sRGB() { this->_chroma_transform.set_sRGB(); }
 
@@ -353,7 +410,7 @@ class RgbProfile : public Component {
   void use_ACES_AP0() { this->_chroma_transform.set_ACES_AP0(); }
 
   void use_ACES_AP1() { this->_chroma_transform.set_ACES_AP1(); }
-  
+
   // Typical Output Profile
   void use_typical_led() { this->_chroma_transform.set_typical_led(); }
 
