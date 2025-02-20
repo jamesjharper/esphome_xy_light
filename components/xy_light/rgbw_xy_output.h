@@ -12,8 +12,6 @@ namespace xy_light {
 
 class RgbwXyOutput : public Component, public XyOutput {
  protected:
-  RgbChromaTransform _rgb_profile_transform;
-  WhiteChromaTransform _white_profile_transform;
   bool _calibration_logging = false;
 
   output::FloatOutput *_r = NULL;
@@ -22,32 +20,37 @@ class RgbwXyOutput : public Component, public XyOutput {
   output::FloatOutput *_w = NULL;
 
  public:
+  RgbChromaTransform rgb_profile_transform;
+  WhiteChromaTransform white_profile_transform;
+
   void set_color_XYZ(float X, float Y, float Z) override {
     auto XYZ = color_space::XYZ_Cie1931(X, Y, Z);
-    auto rgb = this->_rgb_profile_transform.XYZ_to_RGB(XYZ);
-    auto w = this->_white_profile_transform.XYZ_to_white_intensity(XYZ);
+    auto rgb = this->rgb_profile_transform.XYZ_to_RGB(XYZ);
+    auto w = this->white_profile_transform.XYZ_to_white_intensity(XYZ);
 
     if (this->_calibration_logging)
       this->log_calibration_data(rgb, w);
 
+    rgb = rgb.clamp_truncate();
+
     if (this->_r)
-      this->_r->set_level(clamp(rgb.r, 0.0f, 1.0f));
+      this->_r->set_level(rgb.r);
 
     if (this->_g)
-      this->_g->set_level(clamp(rgb.g, 0.0f, 1.0f));
+      this->_g->set_level(rgb.g);
 
     if (this->_b)
-      this->_b->set_level(clamp(rgb.b, 0.0f, 1.0f));
+      this->_b->set_level(rgb.b);
 
     if (this->_w)
-      this->_w->set_level(clamp(w, 0.0f, 1.0f));
+      this->_w->set_level(color_space::clamp_output_value(w));
   }
 
   void enable_calibration_logging(bool enable) { this->_calibration_logging = enable; }
 
-  void set_color_profile(RgbProfile *profile) { this->_rgb_profile_transform = profile->get_chroma_transform(); }
+  void set_color_profile(RgbProfile *profile) { this->rgb_profile_transform = profile->get_chroma_transform(); }
 
-  void set_white_profile(WhiteProfile *profile) { this->_white_profile_transform = profile->get_chroma_transform(); }
+  void set_white_profile(WhiteProfile *profile) { this->white_profile_transform = profile->get_chroma_transform(); }
 
   void set_red_output(output::FloatOutput *red) { this->_r = red; }
 

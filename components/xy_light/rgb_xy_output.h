@@ -11,34 +11,37 @@
 namespace esphome {
 namespace xy_light {
 
+
 class RgbXyOutput : public Component, public XyOutput {
  protected:
-  RgbChromaTransform _rgb_profile_transform;
   bool _calibration_logging = false;
   output::FloatOutput *_r = NULL;
   output::FloatOutput *_g = NULL;
   output::FloatOutput *_b = NULL;
 
  public:
+  RgbChromaTransform rgb_profile_transform;
+
   void set_color_XYZ(float X, float Y, float Z) override {
-    auto rgb = this->_rgb_profile_transform.XYZ_to_RGB(color_space::XYZ_Cie1931(X, Y, Z));
+    auto rgb = this->rgb_profile_transform.XYZ_to_RGB(color_space::XYZ_Cie1931(X, Y, Z));
 
     if (this->_calibration_logging)
       this->log_calibration_data(rgb);
 
+    rgb = rgb.clamp_truncate();
     if (this->_r)
-      this->_r->set_level(clamp(rgb.r, 0.0f, 1.0f));
+      this->_r->set_level(rgb.r);
 
     if (this->_g)
-      this->_g->set_level(clamp(rgb.g, 0.0f, 1.0f));
+      this->_g->set_level(rgb.g);
 
     if (this->_b)
-      this->_b->set_level(clamp(rgb.b, 0.0f, 1.0f));
+      this->_b->set_level(rgb.b);
   }
 
   void enable_calibration_logging(bool enable) { this->_calibration_logging = enable; }
 
-  void set_color_profile(RgbProfile *profile) { this->_rgb_profile_transform = profile->get_chroma_transform(); }
+  void set_color_profile(RgbProfile *profile) { this->rgb_profile_transform = profile->get_chroma_transform(); }
 
   void set_red_output(output::FloatOutput *red) { this->_r = red; }
 
