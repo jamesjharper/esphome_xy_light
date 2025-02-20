@@ -53,6 +53,19 @@ class XyLightOutput {
     }
   }
 
+  void set_white_balance_xy(float x, float y) {
+    if(!this->_calibration_logging) {
+      this->_white_point = color_space::Xy_Cie1931(x, y);
+    }
+  }
+  
+  void set_white_balance_illuminant(color_space::Cie2dColorSpace i) {
+    if(!this->_calibration_logging) {
+      this->_white_point = i.as_xy_cie1931();
+    }
+  }
+
+
   void set_color_saturation_value(float i) {
     this->_saturation = i;
   }
@@ -74,27 +87,25 @@ class XyLightOutput {
   void apply() {
     if (this->_xy.has_value()) {
       // Use xy values if they have been given
-      this->apply_xyY(this->_xy.value(), 1.0f);
+      this->apply_xyY(this->_xy.value().as_xyY_cie1931(1.0f));
     } else {
       // Otherwise convert RGB values to xy from source colour space
       auto xyY = this->_gamut_transform.RGB_to_XYZ(this->_rgb).as_xyY_cie1931();
-      auto xy = xyY.as_xy_cie1931();
-      auto Y = xyY.Y;
-      this->apply_xyY(xy, Y);
+      this->apply_xyY(xyY);
     }
   }
 
-  void apply_xyY(color_space::Xy_Cie1931 xy, float Y) {
+  void apply_xyY(color_space::xyY_Cie1931 xyY) {
     if (!almost_eq(this->_saturation, 1.0f)) {
-      xy = this->_gamut_transform.adjust_saturation(xy, this->_saturation);
+      xyY = this->_gamut_transform.adjust_saturation(xyY, this->_saturation);
     } 
 
     if (!almost_eq(this->_brightness, 1.0f)) {
-      Y *= this->_brightness;
+      xyY.Y *= this->_brightness;
     }
 
     // Adjust white balance
-    auto XYZ = color_space::xyY_Cie1931(xy.x, xy.y, Y).as_XYZ_cie1931();
+    auto XYZ = xyY.as_XYZ_cie1931();
     XYZ = this->_gamut_transform.adjust_white_balance(XYZ, this->_white_point);
 
     if(this->_calibration_logging) {
