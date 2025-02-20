@@ -22,7 +22,7 @@ class CwWwXyOutput : public Component, public XyOutput {
 
     if (this->_calibration_logging)
       this->log_calibration_data(cwww);
-
+    cwww = cwww.clamp_truncate();
     if (this->_cold_white)
       this->_cold_white->set_level(cwww.cw);
 
