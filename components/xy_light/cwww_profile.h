@@ -15,25 +15,19 @@ class CwWwChromaTransform {
   float _green_tint_duv_impurity = 0.06f;
   float _purple_tint_duv_impurity = 0.05f;
 
-  float _red_wb_impurity_threshold_mired = 100.0f;
-  float _blue_wb_impurity_threshold_mired = 10.0f;
+  float _red_wb_impurity_threshold_mired = 250.0f;
+  float _blue_wb_impurity_threshold_mired = 80.0f;
 
   float _red_wb_impurity_k;
   float _blue_wb_impurity_k;
 
   float _warm_white_k;
+  float _warm_white_mired;
   float _cold_white_k;
-  optional<float> _white_point_k;
+  float _cold_white_mired;
+  optional<float> _white_point_mired;
 
   color_space::CwWwIntensityCalibration _int_cal;
-
-  float _cold_white_max_output_cal = 1.0f;
-  float _warm_white_max_output_cal = 1.0f;
-  float _combined_max_output = 1.0f;
-
-  float _cold_white_min_output_cal = 0.0f;
-  float _warm_white_min_output_cal = 0.0f;
-  float _combined_min_output = 0.0f;
 
   // Greater the rate of decay:
   // - more colour accurate
@@ -44,7 +38,8 @@ class CwWwChromaTransform {
   //  - more washed out the colours,
   //  - brighter light
   //  - and will have less obvious shifts in brightness when moving between green/purple to red/blue/white hues
-  float _impurity_attn_decay_gamma = 1.5f;
+  //float _impurity_attn_decay_gamma = 1.5f;
+  float _impurity_attn_decay_gamma = 3.0f;
 
  public:
   void set_gamma(float g) { this->_gamma = g; }
@@ -60,17 +55,19 @@ class CwWwChromaTransform {
   void set_warm_white(float mired) {
     auto ww = color_space::ColorTemperature::from_mired(mired);
     this->_warm_white_k = ww.as_kelvin();
+    this->_warm_white_mired = mired;
     this->_red_wb_impurity_k = ww.add_mired(this->_red_wb_impurity_threshold_mired).as_kelvin();
   }
 
   void set_cold_white(float mired) {
     auto cw = color_space::ColorTemperature::from_mired(mired);
     this->_cold_white_k = cw.as_kelvin();
+    this->_cold_white_mired = mired;
     this->_blue_wb_impurity_k = cw.sub_mired(this->_blue_wb_impurity_threshold_mired).as_kelvin();
   }
 
   void set_white_point(float mired) {
-    this->_white_point_k = color_space::ColorTemperature::from_mired(mired).as_kelvin();
+    this->_white_point_mired = mired;
   }
 
   void set_red_wb_impurity(float mired) {
@@ -99,10 +96,11 @@ class CwWwChromaTransform {
   }
 
   float wb_impurity_attenuation_factor(float k) {
+    // Calculate in kelvin, otherwise the role off for warmer colors is too sudden
     if (k > this->_cold_white_k) {
-      return clamp(1 - ((k - this->_cold_white_k) / this->_blue_wb_impurity_k), 0.0f, 1.0f);
+      return clamp(((this->_blue_wb_impurity_k - k) / (k - this->_cold_white_k)), 0.0f, 1.0f);
     } else if (k < this->_warm_white_k) {
-      return clamp(1 - ((this->_warm_white_k - k) / this->_red_wb_impurity_k), 0.0f, 1.0f);
+      return clamp(((k - this->_red_wb_impurity_k) / (this->_warm_white_k - k)), 0.0f, 1.0f);
     }
 
     return 1.0;
@@ -137,11 +135,12 @@ class CwWwChromaTransform {
       return {0.0f, 0.0f};
     }
 
-    float wp_k = this->white_point();
+    float wp = this->white_point_mired();
+    auto mired = 1000000.0f / k;
 
-    auto cwww = k < wp_k?
-      color_space::CwWw((1 - ((wp_k - k) / (wp_k - this->_warm_white_k))) * brightness, brightness) :
-      color_space::CwWw(brightness,(1 - ((k - wp_k) / (this->_cold_white_k - wp_k))) * brightness);
+    auto cw = (1 - ((mired - wp) / (this->_warm_white_mired - wp))) * brightness;
+    auto ww = (1 - ((wp - mired) / (wp - this->_cold_white_mired))) * brightness;
+    auto cwww = color_space::CwWw(cw, ww);
 
     cwww = cwww.gamma_compress(this->_gamma);
     cwww = this->_int_cal.apply_calibration(cwww);
@@ -150,11 +149,11 @@ class CwWwChromaTransform {
   }
 
  protected:
-  float &white_point() {
-    if (!this->_white_point_k.has_value()) {
-      this->_white_point_k = (this->_warm_white_k + this->_cold_white_k) / 2;
+  float &white_point_mired() {
+    if (!this->_white_point_mired.has_value()) {
+      this->_white_point_mired = (this->_warm_white_mired + this->_cold_white_mired) / 2;
     }
-    return this->_white_point_k.value();
+    return this->_white_point_mired.value();
   }
 };
 
