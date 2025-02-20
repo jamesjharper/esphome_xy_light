@@ -34,18 +34,27 @@ static float exp_gamma_decompress(float value, float gamma) {
 }
 
 static float srgb_gamma_compress(float linear, float gamma) {
-    if (linear <= 0.0031308) {
+    if (linear <= 0.0031308f) {
         return 12.92 * linear;
     } else {
         return 1.055 * powf(linear, 1.0f / gamma) - 0.055f;
     }
 }
 static float srgb_gamma_decompress(float sRGB, float gamma) {
-    if (sRGB <= 0.04045) {
+    if (sRGB <= 0.04045f) {
         return sRGB / 12.92f;
     } else {
         return powf((sRGB + 0.055f) / 1.055f, gamma);
     }
+}
+
+static float clamp_output_value(float v) {
+  if(isnan(v)) {
+    return 0.0f;
+  } else if(std::isinf(v)){
+    return 1.0f;
+  }
+  return clamp(v, 0.0f, 1.0f);
 }
 
 struct RGB {
@@ -58,8 +67,14 @@ struct RGB {
 
   float max() { return std::max(std::max(this->r, this->g), this->b); }
 
+  
+
   RGB clamp_truncate() {
-    return RGB(clamp(this->r, 0.0f, 1.0f), clamp(this->g, 0.0f, 1.0f), clamp(this->b, 0.0f, 1.0f));
+    return RGB(
+      clamp_output_value(this->r), 
+      clamp_output_value(this->g), 
+      clamp_output_value(this->b)
+    );
   }
 
   RGB clamp_normalize() {
@@ -69,9 +84,14 @@ struct RGB {
     }
     return *this;
   }
+
+  RGB adjust_brightness(float i) {
+    return RGB(this->r * i, this->g * i, this->b * i);
+  }
 };
 
 struct RGBIntensityCalibration {
+
   float r_int_output_cal = 1.0; 
   float g_int_output_cal = 1.0; 
   float b_int_output_cal = 1.0;
@@ -91,10 +111,10 @@ struct RGBIntensityCalibration {
   RGB apply_calibration(RGB rgb) {
     this->adjust_for_weighted_outputs(rgb);
     this->adjust_for_colors_out_of_gamut(rgb);
-    this->adjust_for_min_max_intensity(rgb);
-
+  
     // Adjust gamma last as this is to correct for the output response curve
     this->adjust_for_gamma_correction(rgb);
+    this->adjust_for_hardware_min_max_intensity(rgb);
     return rgb;
   }
 
@@ -120,18 +140,28 @@ struct RGBIntensityCalibration {
     rgb.r = (r_adj / max) * l;
     rgb.g = (g_adj / max) * l;
     rgb.b = (b_adj / max) * l;
+
   }
 
-  void adjust_for_min_max_intensity(RGB &rgb) {
-    rgb.r = rgb.r == 0.0f? 0.0f : (rgb.r * (1.0f - r_min_output_cal) * r_max_output_cal) + r_min_output_cal;
-    rgb.b = rgb.b == 0.0f? 0.0f : (rgb.b * (1.0f - b_min_output_cal) * b_max_output_cal) + b_min_output_cal;
-    rgb.g = rgb.g == 0.0f? 0.0f : (rgb.g * (1.0f - g_min_output_cal) * g_max_output_cal) + g_min_output_cal;
+  void quantize_value(RGB &rgb, uint32_t bit_depth)  {
+    const float max_duty = (uint32_t(1) << bit_depth) - 1;
+    rgb.r = (float)((uint32_t)(std::max(rgb.r, 0.0f) * max_duty)) / max_duty;
+    rgb.b = (float)((uint32_t)(std::max(rgb.g, 0.0f) * max_duty)) / max_duty;
+    rgb.g = (float)((uint32_t)(std::max(rgb.b, 0.0f) * max_duty)) / max_duty;
+  }
+
+  void adjust_for_hardware_min_max_intensity(RGB &rgb) {
+    const float epsilon = 1.401298E-45f;
+    rgb.r = rgb.r <= epsilon? 0.0f : (rgb.r * (1.0f - r_min_output_cal) * r_max_output_cal) + r_min_output_cal;
+    rgb.b = rgb.b <= epsilon? 0.0f : (rgb.b * (1.0f - b_min_output_cal) * b_max_output_cal) + b_min_output_cal;
+    rgb.g = rgb.g <= epsilon? 0.0f : (rgb.g * (1.0f - g_min_output_cal) * g_max_output_cal) + g_min_output_cal;
   }
 
   void adjust_for_gamma_correction(RGB &rgb) {
-    rgb.r = exp_gamma_decompress(rgb.r, r_gamma);
-    rgb.g = exp_gamma_decompress(rgb.g, g_gamma);
-    rgb.b = exp_gamma_decompress(rgb.b, b_gamma);
+    rgb.r = exp_gamma_compress(rgb.r, r_gamma);
+    rgb.g = exp_gamma_compress(rgb.g, g_gamma);
+    rgb.b = exp_gamma_compress(rgb.b, b_gamma);
+    
   }
 };
 
@@ -151,6 +181,13 @@ struct CwWw {
   CwWw gamma_decompress(float gamma) {
     return CwWw(exp_gamma_decompress(this->cw, gamma), exp_gamma_decompress(this->ww, gamma));
   }
+
+  CwWw clamp_truncate() {
+    return CwWw(
+      clamp_output_value(this->cw), 
+      clamp_output_value(this->ww)
+    );
+  }
 };
 
 struct CwWwIntensityCalibration {
@@ -163,6 +200,8 @@ struct CwWwIntensityCalibration {
   float min_combined = 0.0f;
 
   CwWw apply_calibration(CwWw in) {
+
+    const float epsilon = 1.401298E-45f;
     auto cw = in.cw;
     auto ww = in.ww;
 
@@ -182,7 +221,7 @@ struct CwWwIntensityCalibration {
     auto min_cw_lv = 1.0f;
     auto min_ww_lv = 1.0f;
 
-    if (cw_lv == 0.0f) {
+    if (cw_lv <= epsilon) {
       // Zero means zero
       max_cw_lv = 0.0f;
       min_cw_lv = 0.0f;
@@ -196,7 +235,7 @@ struct CwWwIntensityCalibration {
       min_cw_lv = (min_cw * ratio) + (min_combined * (1.0f -  ratio));
     }
     
-    if (ww_lv == 0.0f) {
+    if (ww_lv <= epsilon) {
       // Zero means zero
       min_ww_lv = 0.0f;
       min_ww_lv = 0.0f;
