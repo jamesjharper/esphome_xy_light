@@ -43,14 +43,14 @@ def ct_range(value):
     )
 
 def duv(value):
-    if isinstance(duv, (int, float)):
+    if isinstance(value, (int, float)):
 
         if x < 0:
             raise cv.Invalid("Delta uv must be greater then 0.0")
         if x > 0.8:
             raise cv.Invalid("Delta uv must be less then 0.8")
 
-        return duv
+        return value
 
     raise cv.Invalid(
         "Invalid value '{}' for Delta uv. Only values between 0.0 and 0.8 is allowed."
