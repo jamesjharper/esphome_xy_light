@@ -81,10 +81,6 @@ RGB_PROFILE_CONFIG_SCHEMA = cv.All(
 async def to_rgb_profile_code(config):
     var = cg.new_Pvariable(config[CONF_ID])
    
-    if CONF_PROFILE_GAMMA in config:
-        g = config[CONF_PROFILE_GAMMA]
-        cg.add(var.set_gamma(g))
-
     if CONF_PROFILE_STANDARD_PROFILE in config:
         profile_standard = config[CONF_PROFILE_STANDARD_PROFILE]
         if CONF_PROFILE_STANDARD_PROFILE__LED == profile_standard:
@@ -100,6 +96,11 @@ async def to_rgb_profile_code(config):
         elif CONF_PROFILE_STANDARD_PROFILE__ACES_AP1 == profile_standard:
             cg.add(var.use_ACES_AP1())
 
+
+    if CONF_PROFILE_GAMMA in config:
+        g = config[CONF_PROFILE_GAMMA]
+        cg.add(var.set_gamma(g))
+        
     # Red Calibrations
     if CONF_PROFILE_RED_XY in config:
         xy = config[CONF_PROFILE_RED_XY]
