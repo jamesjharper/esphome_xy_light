@@ -35,7 +35,14 @@ xyY_Cie1931 Xy_Cie1931::as_xyY_cie1931(float Y) { return xyY_Cie1931(this->x, th
 XYZ_Cie1931 Xy_Cie1931::as_XYZ_cie1931(float Y) { return xyY_Cie1931(this->x, this->y, Y).as_XYZ_cie1931(); }
 
 float Xy_Cie1931::cct_kelvin_approx() {
+
   // Note: the McCamy approximation method is unstable under 1800k
+  // If 1960 u value exceeds 0.323 (value for approx 1800k) then use a naive linear interpolation method
+  auto uv = this->as_uv_cie1960();
+  if(uv.u > 0.323f) {
+    return ((1.0f - ((uv.u - 0.323f) / (0.41f - 0.323f))) * 800) + 1000;
+  }
+  
   double n = (this->x - 0.3320) / (this->y - 0.1858);
   double n2 = n * n;
   double n3 = n * n2;
