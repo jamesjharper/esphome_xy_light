@@ -34,6 +34,8 @@ light:
           cwww_profile: 
             warm_white: "1800 K"
             cold_white: "6500 K"
+            attenuation_function: inverse_gamma
+            impurity_gamma_decay: 3.0
             gamma: 1.8
           rgb_profile:
             standard: led
@@ -158,7 +160,8 @@ There are however trade-offs which may need to be considered.
 - **red_cct_impurity** (*Optional*, `mired`): The allowable distance from the Planckian locus point corresponding with the warm white device. Too smaller the value, the more noticeable the transition from warm to red light will be, too large will cause reds to appear orange. Adjust this if Reds are becoming too orange or if you notice flickering when changing between red hues (Caused by inaccuracies in McCamy's approximation at low temperatures, you may also consider increasing the color_temperature_range in the `XyControl`, values below 1500K can have issues). *Recommend to only express this value in mired not kelvin, default value is 100 mired.*
 - **blue_cct_impurity** (*Optional*, `mired`): The allowable distance from the Planckian locus point corresponding with the cold white device. Too smaller the value, the more noticeable the transition from cold to blue light will be, too large will wash out blue colours. Wash-out is mostly imperceptible, so adjust this if you want to artificially extend the brightness of light blue colours. (Especially useful when using extreme colour temperatures (10K+) to simulate the blue sky (Rayleigh scattering) for ambient daytime lighting). *Recommend to only express this value in mired not kelvin, default value is 10 mired.*
 - **{green/purple}_tint_impurity** (*Optional*, `delta UV`): The allowable distance from the Planckian locus in the green/purple direction. Too smaller the value, the more noticeable the transition from white to green/purple light will be, too larger the more washed-out greens/purple will appear. *Only adjust this value if needed, otherwise leave as the default value of 0.06(green) and 0.05(purple)*
-- **impurity_gamma_decay** (*Optional*, `float`): The rate of attenuation as the target xy value deviates from the ideal Planckian locus interval. *Increase this value to reduce colour washout, default value is 1.5 mired.*
+- **attenuation_function** (*Optional*, `gamma_decay|inverse_gamma|linear`): Selects how the normalized CWWW impurity value is converted to output attenuation. `inverse_gamma` is the default and uses `impurity^(1/max(gamma, 1))`; `gamma_decay` preserves the legacy `impurity^gamma` behaviour; `linear` applies no curve shaping.
+- **impurity_gamma_decay** (*Optional*, `float`): Gamma used by `gamma_decay` and `inverse_gamma`. The current default is 3.0.
 - **gamma** (*Optional*, `flat`): Mostly an aesthetical choice as gamma is already decompressed into the xy space. Can be used to reduce the effect of white LEDs which become inaccurate at very low intensities with positive curvature (ie a gamma value below 1.0). *Default is to apply no gamma adjustment*
 
 
