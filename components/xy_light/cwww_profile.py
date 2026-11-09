@@ -7,6 +7,7 @@ from . import validation as xy_cv
 from .xy_output import xy_light_ns
 from .profile import CONF_PROFILE_GAMMA
 from .profile import CONF_PROFILE_IMPURITY_GAMMA_DECAY
+from .profile import CONF_PROFILE_CWWW_ATTENUATION_FUNCTION
 from .profile import (CONF_PROFILE_GREEN_TINT_IMPURITY, CONF_PROFILE_PURPLE_TINT_IMPURITY)
 from .profile import (CONF_PROFILE_RED_CCT_IMPURITY, CONF_PROFILE_BLUE_CCT_IMPURITY)
 
@@ -18,11 +19,21 @@ from .profile import (CONF_PROFILE_MIN_WARM_WHITE_INTENSITY, CONF_PROFILE_MIN_CO
 
 # CWWW Profile Common 
 CwWwProfile = xy_light_ns.class_("CwWwProfile", cg.Component)
+CwWwAttenuationFunction = xy_light_ns.enum("CwWwAttenuationFunction")
+
+CWWW_ATTENUATION_FUNCTIONS = {
+    "gamma_decay": CwWwAttenuationFunction.GAMMA_DECAY,
+    "inverse_gamma": CwWwAttenuationFunction.INVERSE_GAMMA,
+    "linear": CwWwAttenuationFunction.LINEAR,
+}
 
 CWWW_PROFILE_CONFIG_SCHEMA  = cv.Schema({ 
     cv.GenerateID(CONF_ID): cv.declare_id(CwWwProfile),
 
     cv.Optional(CONF_PROFILE_IMPURITY_GAMMA_DECAY): cv.positive_float,
+    cv.Optional(
+        CONF_PROFILE_CWWW_ATTENUATION_FUNCTION, default="inverse_gamma"
+    ): cv.enum(CWWW_ATTENUATION_FUNCTIONS, lower=True),
 
     cv.Optional(CONF_PROFILE_GREEN_TINT_IMPURITY): xy_cv.duv,
     cv.Optional(CONF_PROFILE_PURPLE_TINT_IMPURITY): xy_cv.duv,
@@ -79,6 +90,8 @@ async def to_cwww_profile_code(config):
     if CONF_PROFILE_IMPURITY_GAMMA_DECAY in config:
         imp = config[CONF_PROFILE_IMPURITY_GAMMA_DECAY]
         cg.add(var.set_impurity_decay_gamma(imp))
+
+    cg.add(var.set_attenuation_function(config[CONF_PROFILE_CWWW_ATTENUATION_FUNCTION]))
 
     if CONF_PROFILE_WHITE_POINT_COLOR_TEMPERATURE in config:
         wp_cct = config[CONF_PROFILE_WHITE_POINT_COLOR_TEMPERATURE]
