@@ -14,8 +14,10 @@ inline float duv_approx_ohno(float u, float v) {
   if (!std::isfinite(u) || !std::isfinite(v))
     return 0.0f;  // Undefined chromaticity: use a finite, neutral fallback.
 
-  const double du = static_cast<double>(u) - 0.292;
-  const double dv = static_cast<double>(v) - 0.240;
+  // Subtract float reference constants before widening so a float input
+  // exactly at the reference point produces an exact zero radius.
+  const double du = static_cast<double>(u - 0.292f);
+  const double dv = static_cast<double>(v - 0.240f);
   const double radius = std::sqrt(du * du + dv * dv);
   if (radius == 0.0)
     return 0.0f;  // Angle is undefined exactly at the reference point.
