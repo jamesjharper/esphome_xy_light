@@ -1,0 +1,22 @@
+components/xy_light/light.py
+  s_3df96f4783e157::t_ac023989bd908a 3-6,29,77,97-100,108,114-117,139-145
+  s_3df96f4783e157::t_169cdd0c2a1c88 96
+components/xy_light/xy_light.h
+  s_3df96f4783e157::t_ac023989bd908a 5-6,185
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0eaa76fc2d770489dc4fee25c72b8177c06e2ba5",
+  "prompts": {},
+  "sessions": {
+    "s_3df96f4783e157": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a17351-a3bd-71a0-928d-d5934f450df0",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "James Harper <jamesjharper@outlook.com>"
+    }
+  }
+}
