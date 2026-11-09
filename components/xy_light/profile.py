@@ -53,6 +53,7 @@ CONF_PROFILE_GREEN_TINT_IMPURITY = "green_tint_impurity"
 CONF_PROFILE_PURPLE_TINT_IMPURITY = "purple_tint_impurity"
 
 CONF_PROFILE_IMPURITY_GAMMA_DECAY = "impurity_gamma_decay"
+CONF_PROFILE_CWWW_ATTENUATION_FUNCTION = "attenuation_function"
 CONF_PROFILE_RED_CCT_IMPURITY = "red_cct_impurity"
 CONF_PROFILE_BLUE_CCT_IMPURITY = "blue_cct_impurity"
 
