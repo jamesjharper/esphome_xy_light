@@ -41,6 +41,7 @@ class CwWwChromaTransform {
   //  - and will have less obvious shifts in brightness when moving between green/purple to red/blue/white hues
   //float _impurity_attn_decay_gamma = 1.5f;
   float _impurity_attn_decay_gamma = 3.0f;
+  CwWwAttenuationFunction _attenuation_function = CwWwAttenuationFunction::INVERSE_GAMMA;
 
  public:
   void set_gamma(float g) { this->_gamma = g; }
@@ -89,6 +90,10 @@ class CwWwChromaTransform {
 
   void set_impurity_decay_gamma(float g) { this->_impurity_attn_decay_gamma = g; }
 
+  void set_attenuation_function(CwWwAttenuationFunction function) {
+    this->_attenuation_function = function;
+  }
+
  private:
   float tint_impurity_attenuation_factor(color_space::xyY_Cie1931 t_xyY) {
     return color_space::Xy_Cie1931(t_xyY.x, t_xyY.y)
@@ -109,10 +114,11 @@ class CwWwChromaTransform {
 
  public:
   color_space::CwWw XYZ_to_CwWw(color_space::XYZ_Cie1931 XYZ) {
-    return this->XYZ_to_CwWw(XYZ, CwWwAttenuationPolicy::COLOR_FIDELITY);
+    return this->XYZ_to_CwWw(XYZ, this->_attenuation_function);
   }
 
-  color_space::CwWw XYZ_to_CwWw(color_space::XYZ_Cie1931 XYZ, CwWwAttenuationPolicy attenuation_policy) {
+  color_space::CwWw XYZ_to_CwWw(color_space::XYZ_Cie1931 XYZ,
+                                CwWwAttenuationFunction attenuation_function) {
     auto t_xyY = XYZ.as_xyY_cie1931();
 
     // Reduce the brightness the future the target colour is from the planckian locus
@@ -135,7 +141,7 @@ class CwWwChromaTransform {
     }
 
     auto brightness = apply_cwww_impurity_attenuation(
-        impurity_attn, this->_impurity_attn_decay_gamma, attenuation_policy) * t_xyY.Y;
+        impurity_attn, this->_impurity_attn_decay_gamma, attenuation_function) * t_xyY.Y;
 
     if (brightness == 0.0f) {
       return {0.0f, 0.0f};
@@ -189,6 +195,10 @@ class CwWwProfile : public Component {
   void set_cold_white_cct(float mired) { this->_chroma_transform.set_cold_white(mired); }
 
   void set_impurity_decay_gamma(float g) { this->_chroma_transform.set_impurity_decay_gamma(g); }
+
+  void set_attenuation_function(CwWwAttenuationFunction function) {
+    this->_chroma_transform.set_attenuation_function(function);
+  }
 
   void set_red_wb_impurity(float mired) { this->_chroma_transform.set_red_wb_impurity(mired); }
 
