@@ -1,6 +1,7 @@
 #pragma once
 #include "esphome/core/component.h"
 #include "esphome/components/xy_light/color_spaces.h"
+#include "esphome/components/xy_light/cwww_attenuation.h"
 
 namespace esphome {
 namespace xy_light {
@@ -108,6 +109,10 @@ class CwWwChromaTransform {
 
  public:
   color_space::CwWw XYZ_to_CwWw(color_space::XYZ_Cie1931 XYZ) {
+    return this->XYZ_to_CwWw(XYZ, CwWwAttenuationPolicy::COLOR_FIDELITY);
+  }
+
+  color_space::CwWw XYZ_to_CwWw(color_space::XYZ_Cie1931 XYZ, CwWwAttenuationPolicy attenuation_policy) {
     auto t_xyY = XYZ.as_xyY_cie1931();
 
     // Reduce the brightness the future the target colour is from the planckian locus
@@ -129,7 +134,8 @@ class CwWwChromaTransform {
       return {0.0f, 0.0f};
     }
 
-    auto brightness = powf(impurity_attn, this->_impurity_attn_decay_gamma) * t_xyY.Y;
+    auto brightness = apply_cwww_impurity_attenuation(
+        impurity_attn, this->_impurity_attn_decay_gamma, attenuation_policy) * t_xyY.Y;
 
     if (brightness == 0.0f) {
       return {0.0f, 0.0f};
