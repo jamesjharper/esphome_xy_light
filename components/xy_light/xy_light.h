@@ -189,7 +189,14 @@ class XyLightControl : public light::LightOutput, public Component  {
     }
 
     if ((uint8_t)(this->_control_attributes & ControlAttributes::CW_WW)) {
-        supported_color_modes.insert(light::ColorMode::COLD_WARM_WHITE);
+        // The xy_light CWWW control exposes a correlated color-temperature
+        // intent to Home Assistant/ESPHome. The hardware-specific CW/WW mix
+        // is produced later by XyLightOutput/CwWwChromaTransform.
+        //
+        // Advertising COLD_WARM_WHITE here is inconsistent with write_state(),
+        // which consumes get_color_temperature() rather than the raw channel
+        // values, and causes callers to send destination-relative CW/WW data.
+        supported_color_modes.insert(light::ColorMode::COLOR_TEMPERATURE);
     }
 
     if ((uint8_t)(this->_control_attributes & ControlAttributes::BRIGHTNESS)) {
