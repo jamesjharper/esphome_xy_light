@@ -3,6 +3,7 @@
 
 #include "esphome/core/log.h"
 #include "esphome/components/xy_light/color_spaces.h"
+#include "esphome/components/xy_light/duv_math.h"
 
 using namespace esphome::xy_light::color_space;
 
@@ -76,31 +77,9 @@ float Uv_Cie1960::cct_kelvin_approx() { return this->as_xy_cie1931().cct_kelvin_
 float Uv_Cie1960::cct_mired_approx() { return this->as_xy_cie1931().cct_mired_approx(); }
 
 float Uv_Cie1960::duv_approx() {
-  // Yoshi Ohno 2011(?)
-  // https://cormusa.org/wp-content/uploads/2018/04/CORM_2011_Calculation_of_CCT_and_Duv_and_Practical_Conversion_Formulae.pdf
-
-  auto vd2 = (this->v - 0.24f) * (this->v - 0.24f);
-  auto ud2 = (this->u - 0.292f) * (this->u - 0.292f);
-  auto Lfp = sqrt(ud2 + vd2);
-
-  auto a = acos((this->u - 0.292) / Lfp);
-
-  auto a2 = a * a;
-  auto a3 = a * a2;
-  auto a4 = a * a3;
-  auto a5 = a * a4;
-  auto a6 = a * a5;
-
-  auto k6 = -0.00616793f;
-  auto k5 = 0.0893944f;
-  auto k4 = -0.5179722f;
-  auto k3 = 1.5317403f;
-  auto k2 = -2.4243787f;
-  auto k1 = 1.925865f;
-  auto k0 = -0.471106f;
-
-  auto Lbb = (k6 * a6) + (k5 * a5) + (k4 * a4) + (k3 * a3) + (k2 * a2) + (k1 * a) + k0;
-  return Lfp - Lbb;
+  // Ohno approximation with safe angle evaluation; preserve the existing
+  // tint-impurity and out-of-gamut rejection policies.
+  return detail::duv_approx_ohno(this->u, this->v);
 }
 
 float Uv_Cie1960::tint_impurity(float green_tint_duv_impurity, float purple_tint_duv_impurity) {
