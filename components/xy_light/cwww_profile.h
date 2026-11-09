@@ -6,6 +6,15 @@
 namespace esphome {
 namespace xy_light {
 
+struct CwWwProjection {
+  bool valid{false};
+  float estimated_color_temperature_mired{0.0f};
+  float projected_color_temperature_mired{0.0f};
+  float impurity{0.0f};
+  float attenuation{0.0f};
+  float brightness_scale{0.0f};
+};
+
 class CwWwChromaTransform {
  protected:
   float _gamma = 1.00f;
@@ -113,42 +122,72 @@ class CwWwChromaTransform {
   }
 
  public:
+  CwWwProjection project_XYZ_to_CwWw(color_space::XYZ_Cie1931 XYZ) {
+    return this->project_XYZ_to_CwWw(XYZ, this->_attenuation_function);
+  }
+
+  CwWwProjection project_XYZ_to_CwWw(color_space::XYZ_Cie1931 XYZ,
+                                      CwWwAttenuationFunction attenuation_function) {
+    CwWwProjection result;
+    auto t_xyY = XYZ.as_xyY_cie1931();
+
+    if (!std::isfinite(t_xyY.x) || !std::isfinite(t_xyY.y) ||
+        !std::isfinite(t_xyY.Y) || t_xyY.Y <= 0.0f) {
+      return result;
+    }
+
+    // Reuse the same Duv validity and tint rejection used by the physical
+    // CWWW transform. Values outside the valid CCT/Duv region remain invalid.
+    auto tint_impurity_attn = this->tint_impurity_attenuation_factor(t_xyY);
+    if (!std::isfinite(tint_impurity_attn) || tint_impurity_attn <= 0.0f) {
+      return result;
+    }
+
+    auto k = t_xyY.cct_kelvin_approx();
+    if (!std::isfinite(k) || k <= 0.0f) {
+      return result;
+    }
+
+    auto wb_impurity_attn = this->wb_impurity_attenuation_factor(k);
+    float impurity_attn = std::min(wb_impurity_attn, tint_impurity_attn);
+    if (!std::isfinite(impurity_attn) || impurity_attn <= 0.0f) {
+      return result;
+    }
+
+    auto attenuation = apply_cwww_impurity_attenuation(
+        impurity_attn, this->_impurity_attn_decay_gamma, attenuation_function);
+    if (!std::isfinite(attenuation)) {
+      return result;
+    }
+
+    auto estimated_mired = 1000000.0f / k;
+    result.valid = true;
+    result.estimated_color_temperature_mired = estimated_mired;
+    result.projected_color_temperature_mired =
+        std::min(std::max(estimated_mired, this->_cold_white_mired), this->_warm_white_mired);
+    result.impurity = impurity_attn;
+    result.attenuation = attenuation;
+    result.brightness_scale = attenuation * t_xyY.Y;
+    return result;
+  }
+
   color_space::CwWw XYZ_to_CwWw(color_space::XYZ_Cie1931 XYZ) {
     return this->XYZ_to_CwWw(XYZ, this->_attenuation_function);
   }
 
   color_space::CwWw XYZ_to_CwWw(color_space::XYZ_Cie1931 XYZ,
                                 CwWwAttenuationFunction attenuation_function) {
-    auto t_xyY = XYZ.as_xyY_cie1931();
-
-    // Reduce the brightness the future the target colour is from the planckian locus
-    auto tint_impurity_attn = this->tint_impurity_attenuation_factor(t_xyY);
-
-    // Exit early if we can, as calculating approximate color temp is very cpu intensive
-    if (tint_impurity_attn == 0.0f) {
-      return {0.0f, 0.0f};
-    }
-
-    auto k = t_xyY.cct_kelvin_approx();
-    auto wb_impurity_attn = this->wb_impurity_attenuation_factor(k);
-
-    // Rather then multiplying the attenuations, take the smallest of the two.
-    // this is to prevent a too rapid of a roll off towards the extreme ends of colour temperatures.
-    float impurity_attn = std::min(wb_impurity_attn, tint_impurity_attn);
-
-    if (impurity_attn == 0.0f) {
-      return {0.0f, 0.0f};
-    }
-
-    auto brightness = apply_cwww_impurity_attenuation(
-        impurity_attn, this->_impurity_attn_decay_gamma, attenuation_function) * t_xyY.Y;
-
-    if (brightness == 0.0f) {
+    auto projection = this->project_XYZ_to_CwWw(XYZ, attenuation_function);
+    if (!projection.valid || projection.brightness_scale == 0.0f) {
       return {0.0f, 0.0f};
     }
 
     float wp = this->white_point_mired();
-    auto mired = 1000000.0f / k;
+    // Preserve the legacy physical-output behaviour by using the unbounded
+    // estimated CCT here. Consumers that need an abstract, achievable colour
+    // should use projected_color_temperature_mired instead.
+    auto mired = projection.estimated_color_temperature_mired;
+    auto brightness = projection.brightness_scale;
 
     auto cw = (1 - ((mired - wp) / (this->_warm_white_mired - wp))) * brightness;
     auto ww = (1 - ((wp - mired) / (wp - this->_cold_white_mired))) * brightness;
