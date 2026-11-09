@@ -87,5 +87,3 @@ async def to_rgbw_xy_output_code(config):
     if CONF_XY_OUTPUT_WHITE_OUTPUT_ID in config:     
         white_output = await cg.get_variable(config[CONF_XY_OUTPUT_WHITE_OUTPUT_ID])
         cg.add(var.set_white_output(white_output))
-
-    await cg.register_component(var, config)

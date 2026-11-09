@@ -44,5 +44,3 @@ async def to_white_xy_output_code(config):
         enable_cal_log = config[CONF_XY_OUTPUT_CALIBRATION_LOGGING]
         if enable_cal_log:
             cg.add(var.enable_calibration_logging(True))   
-
-    await cg.register_component(var, config)

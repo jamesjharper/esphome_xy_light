@@ -1,7 +1,7 @@
 #pragma once
 
 #include "esphome/core/log.h"
-#include "esphome/components/logger/logger.h"
+//#include "esphome/components/logger/logger.h"
 #include "esphome/components/xy_light/color_spaces.h"
 
 namespace esphome {

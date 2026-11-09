@@ -26,7 +26,8 @@ CWWW_XY_OUTPUT_CONFIG_SCHEMA = cv.Schema({
 
 async def to_cwww_xy_output_code(config):
     var = cg.new_Pvariable(config[CONF_ID])
-   
+
+
     # Color Profile
     if CONF_XY_OUTPUT_CWWW_COLOR_PROFILE_ID in config:     
         profile = await cg.get_variable(config[CONF_XY_OUTPUT_CWWW_COLOR_PROFILE_ID])
@@ -50,4 +51,3 @@ async def to_cwww_xy_output_code(config):
         if enable_cal_log:
             cg.add(var.enable_calibration_logging(True))   
 
-    await cg.register_component(var, config)

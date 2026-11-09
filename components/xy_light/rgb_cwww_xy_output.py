@@ -95,4 +95,3 @@ async def to_rgb_cwww_xy_output_code(config):
         warm_white_output = await cg.get_variable(config[CONF_XY_OUTPUT_WARM_WHITE_OUTPUT_ID])
         cg.add(var.set_warm_white_output(warm_white_output))
 
-    await cg.register_component(var, config)

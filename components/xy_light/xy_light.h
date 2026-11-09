@@ -2,9 +2,10 @@
 #include <set>
 #include "esphome/core/optional.h"
 #include "esphome/core/component.h"
+
+#include "esphome/components/output/float_output.h"
 #include "esphome/components/light/light_output.h"
 #include "esphome/components/light/light_state.h"
-#include "esphome/components/output/float_output.h"
 
 #include "esphome/components/xy_light/color_spaces.h"
 #include "esphome/components/xy_light/rgb_profile.h"
@@ -181,7 +182,7 @@ class XyLightControl : public light::LightOutput, public Component  {
   void set_control_attributes(ControlAttributes attr) {
 
     this->_control_attributes = attr | this->_control_attributes;
-    std::set<light::ColorMode> supported_color_modes;
+    light::ColorModeMask supported_color_modes;
 
     if ((uint8_t)(this->_control_attributes & ControlAttributes::CT)) {
         supported_color_modes.insert(light::ColorMode::COLOR_TEMPERATURE);
