@@ -7,38 +7,35 @@
 namespace esphome {
 namespace xy_light {
 
-enum class CwWwAttenuationPolicy : uint8_t {
-  // Existing behaviour: strongly suppress CWWW output as the requested
-  // chromaticity moves away from a reproducible white.
-  COLOR_FIDELITY,
+enum class CwWwAttenuationFunction : uint8_t {
+  // Legacy behaviour: strongly suppress CWWW output as chromaticity moves
+  // away from a reproducible white.
+  GAMMA_DECAY,
 
-  // Effect fallback behaviour: keep the same impurity/validity signal, but
-  // use a gentler response curve so motion/brightness remains visible on
-  // CWWW-only hardware. An impurity of zero still maps to zero.
-  EFFECT_VISIBILITY,
+  // Gentler default: retain more luminance close to the Planckian locus while
+  // preserving the same 0 -> 0 and 1 -> 1 endpoints.
+  INVERSE_GAMMA,
+
+  // No curve shaping; use the normalized impurity value directly.
+  LINEAR,
 };
 
-inline float apply_cwww_impurity_attenuation(float impurity, float decay_gamma,
-                                             CwWwAttenuationPolicy policy) {
-  impurity = std::min(std::max(impurity, 0.0f), 1.0f);
+inline float apply_cwww_impurity_attenuation(
+    float impurity, float gamma, CwWwAttenuationFunction function) {
+  impurity = std::clamp(impurity, 0.0f, 1.0f);
   if (impurity == 0.0f)
     return 0.0f;
 
-  const float gamma = std::max(decay_gamma, 1.0e-6f);
-  switch (policy) {
-    case CwWwAttenuationPolicy::EFFECT_VISIBILITY:
-      // Preserve the same endpoints as COLOR_FIDELITY while bending the
-      // curve in the opposite direction. With the current default gamma=3:
-      //   fidelity: impurity^3
-      //   effects:  impurity^(1/3)
-      // This keeps invalid/fully impure colours dark, but avoids making
-      // otherwise valid saturated colours disappear purely because CWWW
-      // cannot reproduce their chroma.
-      return std::pow(impurity, 1.0f / std::max(gamma, 1.0f));
+  switch (function) {
+    case CwWwAttenuationFunction::LINEAR:
+      return impurity;
 
-    case CwWwAttenuationPolicy::COLOR_FIDELITY:
+    case CwWwAttenuationFunction::GAMMA_DECAY:
+      return std::pow(impurity, std::max(gamma, 1.0e-6f));
+
+    case CwWwAttenuationFunction::INVERSE_GAMMA:
     default:
-      return std::pow(impurity, gamma);
+      return std::pow(impurity, 1.0f / std::max(gamma, 1.0f));
   }
 }
 
