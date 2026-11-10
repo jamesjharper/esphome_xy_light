@@ -1,0 +1,19 @@
+components/xy_light/cwww_profile.py
+  s_51a110d50f0522::t_95ef873f4ce68e 22-24,126
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "114b9a16a22cb384ce08ee3ab0ac1c90f96a2390",
+  "prompts": {},
+  "sessions": {
+    "s_51a110d50f0522": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1c579-3032-7561-84ba-20fbb416bb97",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "James Harper <jamesjharper@outlook.com>"
+    }
+  }
+}
