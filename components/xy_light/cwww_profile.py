@@ -19,7 +19,9 @@ from .profile import (CONF_PROFILE_MIN_WARM_WHITE_INTENSITY, CONF_PROFILE_MIN_CO
 
 # CWWW Profile Common 
 CwWwProfile = xy_light_ns.class_("CwWwProfile", cg.Component)
-CwWwAttenuationFunction = xy_light_ns.enum("CwWwAttenuationFunction")
+# CwWwAttenuationFunction is a C++ enum class, so its values must retain the
+# enum's scope in generated code (for example, xy_light::CwWwAttenuationFunction::INVERSE_GAMMA).
+CwWwAttenuationFunction = xy_light_ns.namespace("CwWwAttenuationFunction")
 
 CWWW_ATTENUATION_FUNCTIONS = {
     "gamma_decay": CwWwAttenuationFunction.GAMMA_DECAY,
