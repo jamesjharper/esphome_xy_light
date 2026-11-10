@@ -189,7 +189,9 @@ class XyLightControl : public light::LightOutput, public Component  {
     }
 
     if ((uint8_t)(this->_control_attributes & ControlAttributes::CW_WW)) {
-        supported_color_modes.insert(light::ColorMode::COLD_WARM_WHITE);
+        // The xy_light CWWW control exposes correlated color-temperature intent.
+        // Hardware-specific CW/WW mixing is produced by the downstream profile.
+        supported_color_modes.insert(light::ColorMode::COLOR_TEMPERATURE);
     }
 
     if ((uint8_t)(this->_control_attributes & ControlAttributes::BRIGHTNESS)) {
